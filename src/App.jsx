@@ -13,6 +13,7 @@ import EarlySectionSubmitModal from './components/EarlySectionSubmitModal';
 import SupabaseSettingsModal from './components/SupabaseSettingsModal';
 import LoginPage from './components/LoginPage';
 import TestSelectionPage from './components/TestSelectionPage';
+import QuestionPaperModal from './components/QuestionPaperModal';
 
 import {
   AVAILABLE_TESTS,
@@ -147,6 +148,7 @@ export default function App() {
   const [isEarlySubmitOpen, setIsEarlySubmitOpen] = useState(false);
   const [isSectionTimeOverOpen, setIsSectionTimeOverOpen] = useState(false);
   const [isSupabaseModalOpen, setIsSupabaseModalOpen] = useState(false);
+  const [isQuestionPaperOpen, setIsQuestionPaperOpen] = useState(false);
   const [pendingExpiredSection, setPendingExpiredSection] = useState(null);
 
   // Resume State
@@ -526,13 +528,20 @@ export default function App() {
     const currentQData = questions.find(q => q.question_number === activeQuestionNumber);
     const spentSec = questionStatuses[activeQuestionNumber]?.timeSpentSeconds || 0;
 
-    setQuestionStatuses((prev) => ({
-      ...prev,
-      [activeQuestionNumber]: {
-        ...prev[activeQuestionNumber],
-        selectedOption: optKey
-      }
-    }));
+    setQuestionStatuses((prev) => {
+      const curr = prev[activeQuestionNumber] || {};
+      const newStatus = (curr.status === STATUS.MARKED_FOR_REVIEW || curr.status === STATUS.ANSWERED_AND_MARKED)
+        ? STATUS.ANSWERED_AND_MARKED
+        : STATUS.ANSWERED;
+      return {
+        ...prev,
+        [activeQuestionNumber]: {
+          ...curr,
+          selectedOption: optKey,
+          status: newStatus
+        }
+      };
+    });
 
     if (currentQData) {
       setLiveSyncMessage(`⚡ Syncing Q${activeQuestionNumber} -> Option ${optKey.toUpperCase()}...`);
@@ -719,22 +728,25 @@ export default function App() {
 
     setQuestionStatuses((prev) => {
       const curr = prev[activeQuestionNumber];
-      if (curr && !curr.selectedOption && (curr.status === STATUS.NOT_VISITED || curr.status === STATUS.NOT_ANSWERED)) {
-        return {
-          ...prev,
-          [activeQuestionNumber]: { ...curr, status: STATUS.NOT_ANSWERED },
-          [targetQNum]: prev[targetQNum]?.status === STATUS.NOT_VISITED
-            ? { ...prev[targetQNum], status: STATUS.NOT_ANSWERED }
-            : prev[targetQNum]
-        };
+      let updatedCurrStatus = curr?.status;
+
+      if (curr) {
+        if (curr.selectedOption) {
+          updatedCurrStatus = (curr.status === STATUS.MARKED_FOR_REVIEW || curr.status === STATUS.ANSWERED_AND_MARKED)
+            ? STATUS.ANSWERED_AND_MARKED
+            : STATUS.ANSWERED;
+        } else if (curr.status === STATUS.NOT_VISITED) {
+          updatedCurrStatus = STATUS.NOT_ANSWERED;
+        }
       }
-      if (prev[targetQNum]?.status === STATUS.NOT_VISITED) {
-        return {
-          ...prev,
-          [targetQNum]: { ...prev[targetQNum], status: STATUS.NOT_ANSWERED }
-        };
-      }
-      return prev;
+
+      return {
+        ...prev,
+        [activeQuestionNumber]: curr ? { ...curr, status: updatedCurrStatus } : curr,
+        [targetQNum]: prev[targetQNum]?.status === STATUS.NOT_VISITED
+          ? { ...prev[targetQNum], status: STATUS.NOT_ANSWERED }
+          : prev[targetQNum]
+      };
     });
 
     setActiveQuestionNumber(targetQNum);
@@ -917,6 +929,7 @@ export default function App() {
         activeTestId={activeTestId}
         onSelectTestTab={handleSwitchTestTab}
         badgeText={activeTestConfig.badgeText}
+        onOpenQuestionPaper={() => setIsQuestionPaperOpen(true)}
         onGoToDashboard={() => {
           try {
             localStorage.setItem('toppers_screen', 'dashboard');
@@ -931,31 +944,31 @@ export default function App() {
         }}
       />
 
-      {/* CBT Status Bar */}
-      <div className="bg-[#e2e8f0] border-b border-gray-300 px-3 sm:px-4 py-1 flex items-center justify-between text-xs text-gray-600">
+      {/* CBT Status Bar - Testbook Style */}
+      <div className="bg-slate-100 border-b border-slate-300 px-3 sm:px-4 py-1.5 flex items-center justify-between text-xs text-slate-700">
         <div className="flex items-center space-x-2">
-          <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-          <span className="font-bold text-gray-800">{activeTestConfig.tabLabel}</span>
-          <span className="text-gray-400">|</span>
-          <span className="text-blue-900 font-medium">
+          <span className="inline-block w-2 h-2 rounded-full bg-[#00a389] animate-pulse"></span>
+          <span className="font-extrabold text-slate-900">{activeTestConfig.tabLabel}</span>
+          <span className="text-slate-400">|</span>
+          <span className="text-[#00a389] font-bold">
             Section {currentSectionIndex + 1} of {sections.length}: <strong>{currentSection?.title}</strong>
           </span>
-          <span className="hidden md:inline text-gray-500">
+          <span className="hidden md:inline text-slate-500">
             ({currentSection?.totalQuestions} Questions • Sequential CBT Locking)
           </span>
         </div>
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-2">
           <button
-            onClick={() => setIsSupabaseModalOpen(true)}
-            className="text-[11px] font-bold text-[#1b4d89] hover:underline bg-white px-2 py-0.5 rounded border border-gray-300 shadow-2xs hover:bg-blue-50 transition"
+            onClick={() => setIsQuestionPaperOpen(true)}
+            className="text-[11px] font-bold text-slate-700 bg-white hover:bg-slate-50 px-2.5 py-0.5 rounded border border-slate-300 shadow-2xs transition cursor-pointer"
           >
-            ⚙️ Supabase Sync &amp; Upload
+            📑 Question Paper
           </button>
           <button
-            onClick={() => setIsCustomQuestionsOpen(true)}
-            className="text-[11px] font-bold text-gray-700 hover:underline bg-white px-2 py-0.5 rounded border border-gray-300 shadow-2xs hover:bg-gray-50 transition"
+            onClick={() => setIsSupabaseModalOpen(true)}
+            className="text-[11px] font-bold text-[#00a389] bg-white hover:bg-[#00a389]/10 px-2 py-0.5 rounded border border-[#00a389]/30 shadow-2xs transition cursor-pointer"
           >
-            📂 Load JSON
+            ⚙️ Cloud Sync
           </button>
         </div>
       </div>
@@ -1021,6 +1034,7 @@ export default function App() {
             sectionTimeLeft={sectionalTimeLeft[activeSectionId] ?? 0}
             candidate={candidate}
             isLastSection={isCurrentSectionLast}
+            onOpenQuestionPaper={() => setIsQuestionPaperOpen(true)}
           />
         </aside>
       </main>
@@ -1111,6 +1125,15 @@ export default function App() {
           });
           setQuestionStatuses(reset);
         }}
+      />
+
+      <QuestionPaperModal
+        isOpen={isQuestionPaperOpen}
+        onClose={() => setIsQuestionPaperOpen(false)}
+        questions={questions}
+        sections={sections}
+        onNavigateToQuestion={handleNavigateToQuestion}
+        language={language}
       />
     </div>
   );

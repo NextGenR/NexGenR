@@ -129,41 +129,46 @@ export default function QuestionArea({
             const isSelected = selectedOption === optKey;
 
             return (
-              <label
+              <div
                 key={optKey}
                 onClick={() => onSelectOption(optKey)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === ' ' || e.key === 'Enter') {
+                    e.preventDefault();
+                    onSelectOption(optKey);
+                  }
+                }}
                 className={`flex items-start p-3 sm:p-3.5 rounded-lg border cursor-pointer transition-all ${
                   isSelected
-                    ? 'bg-blue-50/90 border-blue-500 shadow-2xs text-blue-950 font-medium'
-                    : 'bg-white border-gray-200 hover:bg-gray-50 hover:border-gray-300 text-gray-800'
+                    ? 'bg-[#00a389]/10 border-[#00a389] shadow-xs text-gray-900 font-medium ring-1 ring-[#00a389]/40'
+                    : 'bg-white border-gray-200 hover:bg-slate-50 hover:border-gray-300 text-gray-800'
                 }`}
               >
-                {/* Radio Input */}
+                {/* Radio Indicator */}
                 <div className="flex items-center h-5 mr-3 mt-0.5 shrink-0">
-                  <input
-                    type="radio"
-                    name={`question-${activeQuestionNumber}`}
-                    checked={isSelected}
-                    onChange={() => onSelectOption(optKey)}
-                    className="radio-custom"
-                    id={`opt-${activeQuestionNumber}-${optKey}`}
-                  />
+                  <div className={`w-4 h-4 rounded-full border flex items-center justify-center transition-all ${
+                    isSelected ? 'border-[#00a389] bg-[#00a389]' : 'border-gray-400 bg-white'
+                  }`}>
+                    {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-white"></div>}
+                  </div>
                 </div>
 
                 {/* Option Badge (A, B, C, D) */}
                 <div className={`w-6 h-6 rounded flex items-center justify-center text-xs font-bold mr-3 shrink-0 ${
                   isSelected
-                    ? 'bg-blue-600 text-white'
+                    ? 'bg-[#00a389] text-white shadow-xs'
                     : 'bg-gray-100 text-gray-700 border border-gray-300'
                 }`}>
                   {optKey.toUpperCase()}
                 </div>
 
                 {/* Option Text */}
-                <div className="text-sm leading-relaxed pt-0.5 whitespace-pre-line">
+                <div className="text-sm leading-relaxed pt-0.5 whitespace-pre-line flex-1">
                   {optValue}
                 </div>
-              </label>
+              </div>
             );
           })}
         </div>
@@ -218,15 +223,15 @@ export default function QuestionArea({
             <span className="hidden sm:inline">Previous</span>
           </button>
 
-          {/* Save & Next (Prominent Primary Button) */}
+          {/* Save & Next (Prominent Testbook Primary Button) */}
           <button
             onClick={onSaveAndNext}
-            className="flex items-center space-x-2 px-4 sm:px-5 py-2 text-xs sm:text-sm font-bold text-white bg-[#107c41] hover:bg-[#0b6333] active:bg-[#084e27] rounded shadow transition border border-[#0b6333]"
+            className="flex items-center space-x-2 px-5 py-2 text-xs sm:text-sm font-extrabold text-white bg-[#00a389] hover:bg-[#008f78] active:bg-[#007b67] rounded-lg shadow-sm transition border border-[#008f78] cursor-pointer"
             id="btn-save-next"
             title="Save selected response and proceed to next"
           >
-            <span>Save & Next</span>
-            <ChevronRight className="w-4 h-4" />
+            <span>Save &amp; Next</span>
+            <ChevronRight className="w-4 h-4 stroke-[3]" />
           </button>
 
           {/* Early Submit Section Button */}

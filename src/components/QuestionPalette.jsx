@@ -12,7 +12,8 @@ export default function QuestionPalette({
   onSubmitSectionEarly,
   sectionTimeLeft = 900,
   candidate,
-  isLastSection = false
+  isLastSection = false,
+  onOpenQuestionPaper
 }) {
   // STRICT SECTION LOCKING: Only get questions belonging to current section (1 to 25)
   const sectionQuestions = questions.slice(
@@ -81,7 +82,7 @@ export default function QuestionPalette({
             {currentSection?.shortTitle} Status
           </span>
           <span className="text-[10px] font-semibold text-blue-800 bg-blue-100 px-1.5 py-0.2 rounded">
-            25 Qs
+            {currentSection?.totalQuestions || sectionQuestions.length} Qs
           </span>
         </div>
 
@@ -178,12 +179,12 @@ export default function QuestionPalette({
                 key={qNum}
                 onClick={() => onNavigateToQuestion(qNum)}
                 className={`relative h-9 flex items-center justify-center text-xs transition-all transform active:scale-95 ${btnClass} ${
-                  isActive ? 'ring-2 ring-blue-600 ring-offset-2 ring-offset-white font-extrabold scale-105 z-10' : ''
+                  isActive ? 'ring-2 ring-emerald-500 ring-offset-2 ring-offset-white font-black scale-105 z-10' : ''
                 }`}
-                title={`Question ${qNum} (Sec Q.${relativeQNum}): ${status.replace(/_/g, ' ')}`}
+                title={`Question ${qNum} (Section Q.${relativeQNum}): ${status.replace(/_/g, ' ')}`}
                 id={`palette-btn-${qNum}`}
               >
-                <span>{relativeQNum}</span>
+                <span>{qNum}</span>
                 {showGreenTick && (
                   <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border border-white flex items-center justify-center">
                     <Check className="w-2 h-2 text-white stroke-[3]" />
@@ -195,12 +196,22 @@ export default function QuestionPalette({
         </div>
       </div>
 
-      {/* Palette Bottom: Section Submit or Full Test Submit Button */}
+      {/* Palette Bottom: Question Paper & Submit Buttons (Testbook Style) */}
       <div className="p-3 bg-white border-t border-gray-300 space-y-2">
+        {onOpenQuestionPaper && (
+          <button
+            onClick={onOpenQuestionPaper}
+            className="w-full flex items-center justify-center space-x-1.5 py-1.5 px-3 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-lg border border-slate-300 transition cursor-pointer"
+            id="btn-palette-question-paper"
+            title="Read all 100 questions in question paper mode"
+          >
+            <span>📑 Question Paper</span>
+          </button>
+        )}
         {isLastSection ? (
           <button
             onClick={onSubmitTest}
-            className="w-full flex items-center justify-center space-x-2 py-2 px-3 bg-[#0d6efd] hover:bg-[#0b5ed7] active:bg-[#0a58ca] text-white text-xs font-bold rounded shadow transition tracking-wide uppercase"
+            className="w-full flex items-center justify-center space-x-2 py-2 px-3 bg-[#00a389] hover:bg-[#008f78] active:bg-[#007b67] text-white text-xs font-black rounded-lg shadow transition tracking-wide uppercase cursor-pointer"
             id="btn-submit-test"
           >
             <Send className="w-3.5 h-3.5" />
@@ -209,7 +220,7 @@ export default function QuestionPalette({
         ) : (
           <button
             onClick={onSubmitSectionEarly}
-            className="w-full flex items-center justify-center space-x-1.5 py-2 px-3 bg-[#1b4d89] hover:bg-[#153e6e] text-white text-xs font-bold rounded shadow transition"
+            className="w-full flex items-center justify-center space-x-1.5 py-2 px-3 bg-[#1e293b] hover:bg-[#0f172a] text-white text-xs font-bold rounded-lg shadow transition cursor-pointer"
             id="btn-submit-section"
             title="Complete this section and proceed to next"
           >

@@ -19,7 +19,8 @@ export default function ResultModal({
 }) {
   const currentSections = sections || SECTIONS;
   const [activeTab, setActiveTab] = useState('summary'); // 'summary' | 'solutions' | 'timing'
-  const [solutionSection, setSolutionSection] = useState(() => currentSections[0]?.id || 'gi');
+  const [solutionSection, setSolutionSection] = useState(() => currentSections[0]?.id || 'gs');
+  const [solutionLanguage, setSolutionLanguage] = useState('en'); // 'en' | 'hi'
 
   if (!isOpen) return null;
 
@@ -211,7 +212,9 @@ export default function ResultModal({
                             <td className="p-3 text-center font-bold text-emerald-600">{sCorrect}</td>
                             <td className="p-3 text-center font-bold text-rose-600">{sIncorrect}</td>
                             <td className="p-3 text-center text-gray-500">{sUnattempted}</td>
-                            <td className="p-3 text-center font-bold text-[#1b4d89]">{sMarks.toFixed(2)} / 50</td>
+                            <td className="p-3 text-center font-bold text-[#1b4d89]">
+                              {sMarks.toFixed(2)} / {sec.maxMarks || (sec.totalQuestions * positiveMarks)}
+                            </td>
                           </tr>
                         );
                       })}
@@ -263,10 +266,10 @@ export default function ResultModal({
                               </span>
                             </div>
                             <span className={`px-2 py-0.5 rounded font-bold ${
-                              isCorrect ? 'bg-green-100 text-green-800' :
-                              isUnattempted ? 'bg-gray-200 text-gray-700' : 'bg-red-100 text-red-800'
+                              isCorrect ? 'bg-emerald-100 text-emerald-800' :
+                              isUnattempted ? 'bg-gray-200 text-gray-700' : 'bg-rose-100 text-rose-800'
                             }`}>
-                              {isCorrect ? 'Correct (+2)' : isUnattempted ? 'Unattempted (0)' : 'Incorrect (-0.5)'}
+                              {isCorrect ? `Correct (+${positiveMarks})` : isUnattempted ? 'Unattempted (0)' : `Incorrect (-${negativeMarks})`}
                             </span>
                           </div>
 

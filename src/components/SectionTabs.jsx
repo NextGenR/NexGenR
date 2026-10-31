@@ -62,8 +62,8 @@ export default function SectionTabs({
           let icon = null;
 
           if (isCurrent) {
-            tabStyle = "bg-[#1b4d89] text-white border-[#1b4d89] shadow-sm font-bold ring-1 ring-[#1b4d89]";
-            icon = <Clock className="w-3 h-3 text-amber-300" />;
+            tabStyle = "bg-[#00a389] text-white border-[#00a389] shadow-sm font-bold ring-1 ring-[#00a389]";
+            icon = <Clock className="w-3 h-3 text-white" />;
           } else if (isCompleted) {
             tabStyle = "bg-gray-100 text-gray-500 border-gray-300 cursor-not-allowed opacity-80";
             icon = <CheckCircle className="w-3 h-3 text-emerald-600" />;
@@ -108,11 +108,11 @@ export default function SectionTabs({
       <button
         onClick={onOpenSectionInfo}
         title="View Sectional Marking Scheme & Instructions"
-        className="flex items-center space-x-1 px-2.5 py-1 text-xs font-semibold text-[#1b4d89] bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded transition shrink-0 ml-2"
+        className="flex items-center space-x-1 px-2.5 py-1 text-xs font-semibold text-[#00a389] bg-[#00a389]/10 hover:bg-[#00a389]/20 border border-[#00a389]/30 rounded transition shrink-0 ml-2 cursor-pointer"
         id="section-info-btn"
       >
-        <Info className="w-3.5 h-3.5 text-[#1b4d89]" />
-        <span className="hidden sm:inline">Marking Scheme (15 Min / Sec)</span>
+        <Info className="w-3.5 h-3.5 text-[#00a389]" />
+        <span className="hidden sm:inline">Marking Scheme &amp; Instructions</span>
       </button>
     </div>
   );

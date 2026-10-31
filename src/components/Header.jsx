@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Clock, Globe, User, Maximize2, Minimize2, Database, Layers, Check } from 'lucide-react';
+import { Clock, Globe, User, Maximize2, Minimize2, Database, Layers, Check, BookOpen } from 'lucide-react';
 
 export default function Header({
   sectionTimeLeft,
@@ -22,7 +22,8 @@ export default function Header({
   onSelectTestTab,
   badgeText = 'SECTIONAL TIMED',
   onGoToDashboard,
-  onSwitchUser
+  onSwitchUser,
+  onOpenQuestionPaper
 }) {
   const [isFullscreen, setIsFullscreen] = useState(false);
 
@@ -48,13 +49,13 @@ export default function Header({
   const isLowSectionTime = sectionTimeLeft <= 120; // Under 2 minutes in section
 
   return (
-    <header className="bg-[#1b4d89] text-white shadow-md select-none border-b border-[#0d3463] sticky top-0 z-40">
+    <header className="bg-[#1e293b] text-white shadow-md select-none border-b border-slate-700 sticky top-0 z-40">
       {/* 1. TOP EXAM SWITCHER TAB BAR (SSC CGL MOCK TEST / RRB MOCK TEST) */}
-      <div className="bg-[#0b2447] border-b border-[#1b4d89]/60 px-3 sm:px-4 py-1 flex items-center justify-between">
+      <div className="bg-[#0f172a] border-b border-slate-800 px-3 sm:px-4 py-1 flex items-center justify-between">
         <div className="flex items-center space-x-2 overflow-x-auto">
-          <span className="text-[10px] font-extrabold uppercase tracking-widest text-blue-300 hidden sm:inline flex items-center gap-1.5 pr-1">
-            <Layers className="w-3.5 h-3.5 text-amber-400" />
-            SELECT TEST:
+          <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#00a389] hidden sm:inline flex items-center gap-1.5 pr-1">
+            <Layers className="w-3.5 h-3.5 text-[#00a389]" />
+            TESTBOOK TEST:
           </span>
           <div className="flex items-center space-x-1.5" role="tablist">
             {Object.values(availableTests).map((test) => {
@@ -69,10 +70,8 @@ export default function Header({
                   onClick={() => onSelectTestTab && onSelectTestTab(test.id)}
                   className={`flex items-center space-x-1.5 px-3 py-1 rounded-t text-xs font-bold transition-all border-t-2 ${
                     isActive
-                      ? isRrb
-                        ? 'bg-[#1b4d89] text-white border-emerald-400 shadow-md ring-1 ring-emerald-400/40'
-                        : 'bg-[#1b4d89] text-white border-amber-400 shadow-md ring-1 ring-amber-400/40'
-                      : 'bg-black/30 text-blue-200 border-transparent hover:bg-black/50 hover:text-white'
+                      ? 'bg-[#1e293b] text-white border-[#00a389] shadow-md ring-1 ring-[#00a389]/40'
+                      : 'bg-black/30 text-slate-300 border-transparent hover:bg-black/50 hover:text-white'
                   }`}
                   title={`Switch to ${test.title}`}
                 >
@@ -81,9 +80,7 @@ export default function Header({
                   <span
                     className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
                       isActive
-                        ? isRrb 
-                          ? 'bg-emerald-400 text-blue-950 font-black'
-                          : 'bg-amber-400 text-blue-950 font-black'
+                        ? 'bg-[#00a389] text-white font-black'
                         : 'bg-white/10 text-gray-300'
                     }`}
                   >
@@ -99,7 +96,7 @@ export default function Header({
           {onGoToDashboard && (
             <button
               onClick={onGoToDashboard}
-              className="flex items-center space-x-1 px-2.5 py-0.5 rounded bg-amber-400 hover:bg-amber-300 text-blue-950 text-xs font-black transition shadow-xs cursor-pointer"
+              className="flex items-center space-x-1 px-2.5 py-0.5 rounded bg-[#00a389] hover:bg-[#008f78] text-white text-xs font-black transition shadow-xs cursor-pointer"
               title="Return to 10 RRB Mock Tests Dashboard"
             >
               <span>🏠</span>
@@ -116,36 +113,34 @@ export default function Header({
               <span className="hidden sm:inline">Switch User</span>
             </button>
           )}
-          <div className="text-[11px] text-blue-200/90 hidden lg:flex items-center space-x-2 pl-2">
-            <span className="font-semibold text-amber-300">TCS iON CBT</span>
+          <div className="text-[11px] text-slate-300 hidden lg:flex items-center space-x-2 pl-2">
+            <span className="font-semibold text-[#00a389]">Testbook CBT</span>
           </div>
         </div>
       </div>
 
       {/* 2. MAIN HEADER BAR */}
       <div className="px-3 sm:px-4 py-2 flex items-center justify-between gap-3">
-        {/* Left: Exam Title & Crest */}
+        {/* Left: Exam Title & Testbook Crest */}
         <div className="flex items-center space-x-2.5 min-w-0">
-          <div className="w-9 h-9 rounded-full bg-white/10 border border-white/20 flex items-center justify-center shrink-0 shadow-inner">
-            {activeTestId === 'rrb_cbt_mock_1' ? (
-              <span className="text-lg">🚆</span>
-            ) : (
-              <svg className="w-5 h-5 text-yellow-300" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" />
-              </svg>
-            )}
+          <div className="w-8 h-8 rounded-lg bg-[#00a389] flex items-center justify-center text-white font-black text-sm shadow shrink-0">
+            TB
           </div>
           <div className="truncate">
             <div className="flex items-center space-x-2">
+              <span className="text-white font-extrabold text-sm tracking-tight hidden sm:inline">
+                test<span className="text-[#00a389]">book</span>
+              </span>
+              <span className="text-slate-500 hidden sm:inline">•</span>
               <h1 className="text-sm sm:text-base font-bold tracking-tight text-white leading-tight truncate">
                 {testTitle}
               </h1>
-              <span className="text-[10px] bg-amber-400 text-blue-950 px-1.5 py-0.2 rounded font-black tracking-wide hidden sm:inline">
+              <span className="text-[10px] bg-[#00a389] text-white px-1.5 py-0.2 rounded font-black tracking-wide hidden sm:inline uppercase">
                 {badgeText}
               </span>
             </div>
-            <p className="text-[11px] text-blue-200 hidden sm:block truncate">
-              Current: <span className="font-semibold text-white">{activeSectionTitle}</span> (Strict Section Locking)
+            <p className="text-[11px] text-slate-300 hidden sm:block truncate">
+              Section: <span className="font-semibold text-white">{activeSectionTitle}</span>
             </p>
           </div>
         </div>
@@ -166,6 +161,18 @@ export default function Header({
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
             )}
           </button>
+
+          {/* Question Paper Button (Testbook Feature) */}
+          {onOpenQuestionPaper && (
+            <button
+              onClick={onOpenQuestionPaper}
+              className="hidden lg:flex items-center space-x-1 px-2.5 py-1 rounded bg-[#00a389]/25 hover:bg-[#00a389]/40 text-white border border-[#00a389]/50 text-xs font-bold transition shadow-xs cursor-pointer"
+              title="View entire Question Paper"
+            >
+              <BookOpen className="w-3.5 h-3.5 text-[#00a389]" />
+              <span>Question Paper</span>
+            </button>
+          )}
 
           {/* Section Time Left (Primary Countdown) */}
           <div className={`flex items-center px-2.5 sm:px-3 py-1 rounded border transition-colors ${

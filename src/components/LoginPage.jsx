@@ -71,32 +71,30 @@ export default function LoginPage({ onLogin, initialCandidate }) {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#eef2f6] text-gray-900 font-sans select-none">
-      {/* Top Banner - TCS iON CBT Header */}
-      <header className="bg-[#1b4d89] text-white shadow-md border-b border-[#0d3463]">
+      {/* Top Banner - Testbook Header */}
+      <header className="bg-[#1e293b] text-white shadow-md border-b border-slate-700">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-full bg-white/10 border border-white/20 flex items-center justify-center shadow-inner">
-              <span className="text-xl">🚆</span>
+            <div className="w-9 h-9 rounded-lg bg-[#00a389] flex items-center justify-center text-white font-black text-sm shadow">
+              TB
             </div>
             <div>
               <div className="flex items-center space-x-2">
-                <h1 className="text-base sm:text-lg font-black tracking-tight uppercase">
-                  RRB &amp; SSC Computer Based Test (CBT) Portal
-                </h1>
-                <span className="bg-amber-400 text-blue-950 text-[10px] font-black px-1.5 py-0.5 rounded uppercase">
-                  TCS iON Engine
+                <span className="text-white font-black text-lg tracking-tight">test<span className="text-[#00a389]">book</span></span>
+                <span className="bg-[#00a389]/20 text-[#00a389] border border-[#00a389]/40 text-[10px] font-black px-1.5 py-0.5 rounded uppercase">
+                  SuperCoaching
                 </span>
               </div>
-              <p className="text-xs text-blue-200">
-                Railway Recruitment Board &amp; Staff Selection Commission Assessment System
+              <p className="text-xs text-slate-300">
+                RRB &amp; SSC Computer Based Test (CBT) Portal • Official Pattern Simulation
               </p>
             </div>
           </div>
 
-          <div className="hidden sm:flex items-center space-x-3 text-xs text-blue-100">
+          <div className="hidden sm:flex items-center space-x-3 text-xs text-slate-300">
             <div className="flex items-center space-x-1">
-              <Monitor className="w-4 h-4 text-emerald-400" />
-              <span>CBT Node: <strong>C9-LAB3</strong></span>
+              <Monitor className="w-4 h-4 text-[#00a389]" />
+              <span>CBT Terminal: <strong className="text-white">C9-LAB3</strong></span>
             </div>
           </div>
         </div>
@@ -105,13 +103,13 @@ export default function LoginPage({ onLogin, initialCandidate }) {
       {/* Main Login Area */}
       <main className="flex-1 flex items-center justify-center p-4">
         <div className="bg-white rounded-xl shadow-xl max-w-md w-full border border-gray-300 overflow-hidden animate-fade-in">
-          {/* Card Header */}
-          <div className="bg-gradient-to-r from-[#1b4d89] to-[#2563eb] text-white px-6 py-4 flex items-center justify-between">
+          {/* Card Header - Testbook Style */}
+          <div className="bg-gradient-to-r from-[#1e293b] to-[#065f46] text-white px-6 py-4 flex items-center justify-between">
             <div className="flex items-center space-x-2">
-              <ShieldCheck className="w-5 h-5 text-amber-300" />
+              <ShieldCheck className="w-5 h-5 text-[#00a389]" />
               <h2 className="text-base font-bold tracking-tight">Candidate Login / Identify</h2>
             </div>
-            <span className="text-[11px] font-mono bg-black/25 px-2 py-0.5 rounded text-amber-200">
+            <span className="text-[11px] font-mono bg-black/25 px-2 py-0.5 rounded text-emerald-200">
               System: {selectedCandidate?.systemNo || 'C9-LAB3-042'}
             </span>
           </div>
@@ -119,16 +117,16 @@ export default function LoginPage({ onLogin, initialCandidate }) {
           {/* Form */}
           <div className="p-6 space-y-5">
             {/* Candidate Photo & System Info */}
-            <div className="flex items-center space-x-4 p-3 bg-blue-50/70 rounded-lg border border-blue-200">
-              <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-[#1b4d89] to-indigo-600 flex items-center justify-center text-white text-xl font-bold shadow-md shrink-0 border-2 border-white">
-                {selectedCandidate?.name ? selectedCandidate.name.substring(0, 2).toUpperCase() : 'OM'}
+            <div className="flex items-center space-x-4 p-3 bg-emerald-50/70 rounded-lg border border-emerald-200">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-[#00a389] to-[#047857] flex items-center justify-center text-white text-xl font-bold shadow-md shrink-0 border-2 border-white">
+                {selectedCandidate?.name ? selectedCandidate.name.substring(0, 2).toUpperCase() : 'CD'}
               </div>
               <div className="min-w-0 flex-1">
                 <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">Candidate Name</span>
                 <h3 className="font-extrabold text-gray-900 text-lg truncate leading-tight">
                   {selectedCandidate?.name || 'Om'}
                 </h3>
-                <span className="text-xs text-blue-800 font-mono font-medium block">
+                <span className="text-xs text-emerald-900 font-mono font-medium block">
                   Roll No: <strong>{selectedCandidate?.rollNo || 'RRB2026-OM01'}</strong>
                 </span>
               </div>
@@ -232,9 +230,9 @@ export default function LoginPage({ onLogin, initialCandidate }) {
               {/* Sign In Button */}
               <button
                 type="submit"
-                className="w-full py-3 bg-[#1b4d89] hover:bg-[#153e6e] text-white rounded-lg font-bold text-sm shadow-md hover:shadow-lg transition flex items-center justify-center space-x-2 cursor-pointer mt-2"
+                className="w-full py-3 bg-[#00a389] hover:bg-[#008f78] active:bg-[#007b67] text-white rounded-lg font-extrabold text-sm shadow-md hover:shadow-lg transition flex items-center justify-center space-x-2 cursor-pointer mt-2"
               >
-                <span>Sign In to CBT Portal</span>
+                <span>Sign In to Testbook CBT</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </form>

@@ -245,42 +245,46 @@ export default function TestSelectionPage({
 
   return (
     <div className="min-h-screen flex flex-col bg-[#f0f4f8] text-gray-900 font-sans select-none">
-      {/* Top Header */}
-      <header className="bg-[#1b4d89] text-white shadow-md border-b border-[#0d3463] sticky top-0 z-30">
+      {/* Top Header - Testbook Style */}
+      <header className="bg-[#1e293b] text-white shadow-md border-b border-slate-700 sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-4 py-2.5 flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="w-9 h-9 rounded-full bg-white/10 border border-white/20 flex items-center justify-center">
-              <span className="text-xl">🚆</span>
+            <div className="flex items-center space-x-2">
+              <div className="w-8 h-8 rounded-lg bg-[#00a389] flex items-center justify-center text-white font-black text-sm shadow">
+                TB
+              </div>
+              <div className="flex items-center">
+                <span className="text-white font-black text-lg tracking-tight">test<span className="text-[#00a389]">book</span></span>
+                <span className="text-[10px] font-bold bg-[#00a389]/20 text-[#00a389] border border-[#00a389]/40 px-2 py-0.5 rounded ml-2 uppercase">
+                  SuperCoaching
+                </span>
+              </div>
             </div>
-            <div>
-              <h1 className="text-sm sm:text-base font-extrabold tracking-tight uppercase leading-tight">
-                RRB CBT Mock Test Series Portal
-              </h1>
-              <p className="text-[11px] text-blue-200">
-                TCS iON Examination Assessment Engine • Railway Recruitment Board
-              </p>
-            </div>
+            <span className="text-slate-500 hidden sm:inline">|</span>
+            <span className="text-xs text-slate-300 font-medium hidden sm:inline">
+              RRB &amp; SSC CBT Test Series
+            </span>
           </div>
 
           {/* Candidate Profile Widget & Logout */}
           <div className="flex items-center space-x-3">
-            <div className="flex items-center space-x-2 bg-black/20 px-3 py-1.5 rounded-lg border border-white/10 text-xs">
-              <div className="w-7 h-7 rounded-full bg-amber-400 text-blue-950 font-black flex items-center justify-center text-xs shadow-xs">
-                {candidate?.name ? candidate.name.substring(0, 2).toUpperCase() : 'OM'}
+            <div className="flex items-center space-x-2 bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-700 text-xs">
+              <div className="w-7 h-7 rounded-full bg-[#00a389] text-white font-black flex items-center justify-center text-xs shadow-xs">
+                {candidate?.name ? candidate.name.substring(0, 2).toUpperCase() : 'CD'}
               </div>
               <div className="text-left hidden sm:block leading-tight">
                 <span className="font-bold text-white block">{candidate?.name || 'Om'}</span>
-                <span className="text-[10px] text-blue-200 font-mono">Roll: {candidate?.rollNo || 'RRB2026-OM01'}</span>
+                <span className="text-[10px] text-slate-400 font-mono">Roll: {candidate?.rollNo || 'RRB2026-OM01'}</span>
               </div>
             </div>
 
             <button
               onClick={onLogout}
-              className="flex items-center space-x-1 px-2.5 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded text-xs font-semibold transition border border-white/15"
+              className="flex items-center space-x-1 px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white rounded text-xs font-semibold transition border border-slate-700 cursor-pointer"
               title="Switch Candidate"
             >
-              <LogOut className="w-3.5 h-3.5 text-rose-300" />
-              <span className="hidden md:inline">Change Candidate</span>
+              <LogOut className="w-3.5 h-3.5 text-rose-400" />
+              <span className="hidden md:inline">Change User</span>
             </button>
           </div>
         </div>
@@ -295,18 +299,18 @@ export default function TestSelectionPage({
 
       {/* Main Content Area */}
       <main className="max-w-7xl mx-auto px-4 py-6 flex-1 w-full space-y-6">
-        {/* Welcome Hero Card */}
-        <div className="bg-gradient-to-r from-[#1b4d89] via-[#1e40af] to-[#0369a1] text-white rounded-xl p-5 sm:p-6 shadow-lg border border-blue-800 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        {/* Welcome Hero Card - Testbook Series Banner */}
+        <div className="bg-gradient-to-r from-[#0f172a] via-[#1e293b] to-[#065f46] text-white rounded-xl p-5 sm:p-6 shadow-lg border border-slate-700 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div className="space-y-1.5 max-w-2xl">
-            <div className="inline-flex items-center space-x-1.5 bg-amber-400 text-blue-950 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider">
+            <div className="inline-flex items-center space-x-1.5 bg-[#00a389] text-white px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider shadow-xs">
               <Sparkles className="w-3 h-3" />
-              <span>Official 10 Test Series Ready</span>
+              <span>Testbook SuperCoaching RRB CBT Test Series</span>
             </div>
             <h2 className="text-xl sm:text-2xl font-black tracking-tight">
-              Welcome, {candidate?.name || 'Om'}! Pick Your Mock Test
+              Welcome, {candidate?.name || 'Om'}! Select Your CBT Mock Test
             </h2>
-            <p className="text-blue-100 text-xs sm:text-sm leading-relaxed">
-              Experience the actual TCS iON Computer Based Test (CBT) environment. Select <strong>Mock Test 1</strong> below to begin your full 100-question bilingual test with instant timer tracking and Supabase cloud synchronization.
+            <p className="text-slate-200 text-xs sm:text-sm leading-relaxed">
+              Official TCS iON &amp; Testbook CBT pattern. Attempt <strong>Mock Test 1</strong> with all 100 bilingual questions, real-time timer tracking, zero-loss offline auto-save, and Supabase cloud performance analytics.
             </p>
           </div>
 
@@ -456,12 +460,12 @@ export default function TestSelectionPage({
                   {/* Launch / Resume Button */}
                   <button
                     onClick={() => handleLaunchTest(testItem)}
-                    className={`w-full py-2.5 px-4 rounded-lg font-bold text-xs transition-all flex items-center justify-center space-x-2 shadow-xs cursor-pointer ${
+                    className={`w-full py-2.5 px-4 rounded-lg font-extrabold text-xs transition-all flex items-center justify-center space-x-2 shadow-xs cursor-pointer ${
                       isInProgress
                         ? 'bg-amber-600 hover:bg-amber-700 text-white shadow-md'
                         : isMock1
-                          ? 'bg-[#1b4d89] hover:bg-[#153e6e] text-white hover:shadow-md'
-                          : 'bg-gray-800 hover:bg-black text-white'
+                          ? 'bg-[#00a389] hover:bg-[#008f78] active:bg-[#007b67] text-white hover:shadow-md'
+                          : 'bg-slate-800 hover:bg-slate-900 text-white'
                     }`}
                   >
                     <Play className="w-3.5 h-3.5 fill-current" />
