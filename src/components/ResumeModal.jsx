@@ -53,7 +53,7 @@ export default function ResumeModal({
             <div className="grid grid-cols-2 gap-2 pt-1 text-xs text-gray-700">
               <div>
                 <span className="text-gray-500 block">Candidate:</span>
-                <span className="font-bold text-gray-900">{attemptData.candidate_name || 'ANKIT SHARMA'}</span>
+                <span className="font-bold text-gray-900">{attemptData.candidate_name || 'ANKIT MEWADA'}</span>
               </div>
               <div>
                 <span className="text-gray-500 block">Roll Number:</span>

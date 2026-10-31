@@ -4,7 +4,7 @@ import { User, Lock, ArrowRight, Plus, ShieldCheck, CheckCircle2, Monitor, Award
 export const DEFAULT_CANDIDATES = [
   { name: 'Om', rollNo: 'RRB2026-OM01', systemNo: 'C9-LAB3-042' },
   { name: 'Nitin', rollNo: 'RRB2026-NT02', systemNo: 'C9-LAB3-043' },
-  { name: 'Ankit Sharma', rollNo: '2201048291', systemNo: 'C9-LAB3-044' },
+  { name: 'Ankit Mewada', rollNo: '2201048291', systemNo: 'C9-LAB3-044' },
   { name: 'Shristi', rollNo: 'RRB2026-SH03', systemNo: 'C9-LAB3-045' },
 ];
 
@@ -14,7 +14,9 @@ export default function LoginPage({ onLogin, initialCandidate }) {
       const saved = localStorage.getItem('toppers_candidate_list');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.map(c => (c.name === 'Ankit Sharma' ? { ...c, name: 'Ankit Mewada' } : c));
+        }
       }
     } catch (e) {
       console.warn('Could not read candidate list from storage:', e);

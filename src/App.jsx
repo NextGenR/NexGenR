@@ -14,13 +14,13 @@ import SupabaseSettingsModal from './components/SupabaseSettingsModal';
 import LoginPage from './components/LoginPage';
 import TestSelectionPage from './components/TestSelectionPage';
 
-import { 
+import {
   AVAILABLE_TESTS,
-  STATUS, 
+  STATUS,
   SSC_SECTIONS,
   RRB_SECTIONS,
   getDefaultQuestions,
-  getRrbMockTestQuestions 
+  getRrbMockTestQuestions
 } from './data/questions';
 
 import {
@@ -33,21 +33,40 @@ import {
   submitFinalAttempt
 } from './services/supabase';
 
+// Synchronously read saved test session for instant offline resumption
+export const readSavedSession = (rollNo, testId) => {
+  if (!rollNo || !testId) return null;
+  try {
+    const key = `toppers_session_${rollNo}_${testId}`;
+    const raw = localStorage.getItem(key);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && !parsed.isSubmitted) return parsed;
+    }
+  } catch (err) {
+    console.warn('Could not read saved session:', err);
+  }
+  return null;
+};
+
 export default function App() {
   // Navigation screen states: 'login' | 'dashboard' | 'test'
   const [currentScreen, setCurrentScreen] = useState(() => {
     return localStorage.getItem('toppers_screen') || 'login';
   });
 
-  // Candidate Profile (Managed via Login screen dropdown: Om, Nitin, or custom)
+  // Candidate Profile (Managed via Login screen dropdown: Om, Nitin, Ankit Mewada, or custom)
   const [candidate, setCandidate] = useState(() => {
     try {
       const saved = localStorage.getItem('toppers_active_candidate');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (parsed && parsed.name) return parsed;
+        if (parsed && parsed.name) {
+          if (parsed.name === 'Nitu') parsed.name = 'Ankit Mewada';
+          return parsed;
+        }
       }
-    } catch (e) {}
+    } catch (e) { }
     return {
       name: "Om",
       rollNo: "RRB2026-OM01",
@@ -64,31 +83,50 @@ export default function App() {
   const activeTestConfig = AVAILABLE_TESTS[activeTestId] || AVAILABLE_TESTS.ssc_cgl_tier1_mock_3;
   const sections = activeTestConfig.sections;
 
+  // Retrieve initial saved snapshot if resuming after network drop, reload, or tab close
+  const initialSavedSession = useRef(readSavedSession(candidate.rollNo, activeTestId)).current;
+
   // Questions for active test
   const [questions, setQuestions] = useState(() => activeTestConfig.getQuestions());
 
   // Deterministic attempt ID tied to candidate and active test
   const attemptId = `attempt_${candidate.rollNo}_${activeTestId}`;
 
-  // Section Tracking (Strict Sectional Timing)
-  const [activeSectionId, setActiveSectionId] = useState(() => activeTestConfig.defaultSectionId);
-  const [completedSections, setCompletedSections] = useState([]); // ['gs', 'math', ...]
+  // Section Tracking (Strict Sectional Timing) - Resumes exact active section
+  const [activeSectionId, setActiveSectionId] = useState(() => {
+    return initialSavedSession?.activeSectionId || activeTestConfig.defaultSectionId;
+  });
 
-  // Active Question Number (1 to 100)
-  const [activeQuestionNumber, setActiveQuestionNumber] = useState(1);
+  // Completed sections - Resumes exact completed sections
+  const [completedSections, setCompletedSections] = useState(() => {
+    return Array.isArray(initialSavedSession?.completedSections) ? initialSavedSession.completedSections : [];
+  });
 
-  // Sectional Time Left mapping in seconds
-  const [sectionalTimeLeft, setSectionalTimeLeft] = useState(() => ({
-    ...activeTestConfig.initialSectionalTimes
-  }));
+  // Active Question Number (1 to 100) - Resumes exact question number
+  const [activeQuestionNumber, setActiveQuestionNumber] = useState(() => {
+    return initialSavedSession?.activeQuestionNumber || 1;
+  });
+
+  // Sectional Time Left mapping in seconds - Resumes exact time countdown
+  const [sectionalTimeLeft, setSectionalTimeLeft] = useState(() => {
+    return initialSavedSession?.sectionalTimeLeft || { ...activeTestConfig.initialSectionalTimes };
+  });
 
   const [isTimerRunning, setIsTimerRunning] = useState(true);
-  const [language, setLanguage] = useState('en');
-  const [liveSyncMessage, setLiveSyncMessage] = useState(null);
+  const [language, setLanguage] = useState(() => initialSavedSession?.language || 'en');
+  const [liveSyncMessage, setLiveSyncMessage] = useState(() => {
+    if (initialSavedSession?.activeQuestionNumber) {
+      return `⚡ Test Resumed from Question ${initialSavedSession.activeQuestionNumber} (All answers & timer restored)`;
+    }
+    return null;
+  });
 
   // Question Statuses and Time Spent state map:
   // { [qNum]: { status, selectedOption, timeSpentSeconds } }
   const [questionStatuses, setQuestionStatuses] = useState(() => {
+    if (initialSavedSession?.questionStatuses && Object.keys(initialSavedSession.questionStatuses).length > 0) {
+      return initialSavedSession.questionStatuses;
+    }
     const initial = {};
     const qs = activeTestConfig.getQuestions();
     qs.forEach((q, idx) => {
@@ -120,11 +158,71 @@ export default function App() {
   const [isSynced, setIsSynced] = useState(true);
 
   // --------------------------------------------------------------------------
+  // CONTINUOUS OFFLINE RESUME ENGINE: Auto-Save Snapshot to localStorage
+  // --------------------------------------------------------------------------
+  const latestSessionRef = useRef({});
+  latestSessionRef.current = {
+    candidate,
+    activeTestId,
+    activeSectionId,
+    activeQuestionNumber,
+    completedSections,
+    sectionalTimeLeft,
+    questionStatuses,
+    language,
+    isSubmitted: false,
+    lastSavedAt: Date.now()
+  };
+
+  const persistSessionLocally = () => {
+    if (currentScreen !== 'test' || !candidate?.rollNo || !activeTestId) return;
+    try {
+      const sessionKey = `toppers_session_${candidate.rollNo}_${activeTestId}`;
+      localStorage.setItem(sessionKey, JSON.stringify(latestSessionRef.current));
+    } catch (e) {
+      console.warn('Local session save error:', e);
+    }
+  };
+
+  // Auto-save whenever user navigates, selects options, or switches sections
+  useEffect(() => {
+    if (currentScreen === 'test') {
+      persistSessionLocally();
+    }
+  }, [
+    currentScreen,
+    candidate.rollNo,
+    activeTestId,
+    activeSectionId,
+    activeQuestionNumber,
+    completedSections,
+    questionStatuses,
+    language
+  ]);
+
+  // Synchronous fallback for tab close, network crash, page reload (beforeunload / pagehide)
+  useEffect(() => {
+    const handleUnloadSave = () => {
+      if (currentScreen === 'test' && candidate?.rollNo && activeTestId) {
+        try {
+          const sessionKey = `toppers_session_${candidate.rollNo}_${activeTestId}`;
+          localStorage.setItem(sessionKey, JSON.stringify(latestSessionRef.current));
+        } catch (e) { }
+      }
+    };
+
+    window.addEventListener('beforeunload', handleUnloadSave);
+    window.addEventListener('pagehide', handleUnloadSave);
+    return () => {
+      window.removeEventListener('beforeunload', handleUnloadSave);
+      window.removeEventListener('pagehide', handleUnloadSave);
+    };
+  }, [currentScreen, candidate?.rollNo, activeTestId]);
+
+  // --------------------------------------------------------------------------
   // Tab Switcher Handler (Switch between SSC CGL and RRB Mock Tests)
   // --------------------------------------------------------------------------
   const handleSwitchTestTab = async (newTestId, forceReset = false) => {
-    if (newTestId === activeTestId && !forceReset) return;
-
     const targetConfig = AVAILABLE_TESTS[newTestId];
     if (!targetConfig) return;
 
@@ -134,25 +232,39 @@ export default function App() {
 
     const targetQuestions = targetConfig.getQuestions();
     setQuestions(targetQuestions);
-    setActiveSectionId(targetConfig.defaultSectionId);
-    setCompletedSections([]);
-    setActiveQuestionNumber(1);
-    setSectionalTimeLeft({ ...targetConfig.initialSectionalTimes });
-    setIsTimerRunning(true);
 
-    // Initialize statuses
-    const resetStatuses = {};
-    targetQuestions.forEach((q, idx) => {
-      resetStatuses[q.question_number] = {
-        status: idx === 0 ? STATUS.NOT_ANSWERED : STATUS.NOT_VISITED,
-        selectedOption: null,
-        timeSpentSeconds: 0,
-      };
-    });
-    setQuestionStatuses(resetStatuses);
+    const saved = !forceReset ? readSavedSession(candidate.rollNo, newTestId) : null;
+    if (saved) {
+      // Resume existing in-progress attempt for this test!
+      setActiveSectionId(saved.activeSectionId || targetConfig.defaultSectionId);
+      setActiveQuestionNumber(saved.activeQuestionNumber || 1);
+      setCompletedSections(Array.isArray(saved.completedSections) ? saved.completedSections : []);
+      setSectionalTimeLeft(saved.sectionalTimeLeft || { ...targetConfig.initialSectionalTimes });
+      setQuestionStatuses(saved.questionStatuses || {});
+      setIsTimerRunning(true);
+      setLiveSyncMessage(`⚡ Resumed ${targetConfig.tabLabel} from Question ${saved.activeQuestionNumber || 1}`);
+      setTimeout(() => setLiveSyncMessage(null), 3500);
+    } else {
+      // Start fresh
+      setActiveSectionId(targetConfig.defaultSectionId);
+      setCompletedSections([]);
+      setActiveQuestionNumber(1);
+      setSectionalTimeLeft({ ...targetConfig.initialSectionalTimes });
+      setIsTimerRunning(true);
 
-    setLiveSyncMessage(`Switched to ${targetConfig.tabLabel} (${targetQuestions.length} Questions)`);
-    setTimeout(() => setLiveSyncMessage(null), 3500);
+      const resetStatuses = {};
+      targetQuestions.forEach((q, idx) => {
+        resetStatuses[q.question_number] = {
+          status: idx === 0 ? STATUS.NOT_ANSWERED : STATUS.NOT_VISITED,
+          selectedOption: null,
+          timeSpentSeconds: 0,
+        };
+      });
+      setQuestionStatuses(resetStatuses);
+
+      setLiveSyncMessage(`Switched to ${targetConfig.tabLabel} (${targetQuestions.length} Questions)`);
+      setTimeout(() => setLiveSyncMessage(null), 3500);
+    }
   };
 
   // --------------------------------------------------------------------------
@@ -274,6 +386,11 @@ export default function App() {
           [activeSectionId]: currentSecTime - 1,
         };
       });
+
+      // 3. Periodic snapshot save every 3 seconds to keep time exact
+      if (Math.floor(Date.now() / 1000) % 3 === 0) {
+        persistSessionLocally();
+      }
     }, 1000);
 
     return () => clearInterval(interval);
@@ -300,7 +417,7 @@ export default function App() {
 
   const handleProceedAfterSectionOver = () => {
     setIsSectionTimeOverOpen(false);
-    
+
     // Mark section as completed
     const newlyCompleted = [...new Set([...completedSections, activeSectionId])];
     setCompletedSections(newlyCompleted);
@@ -313,7 +430,7 @@ export default function App() {
       // Advance to next section
       setActiveSectionId(nextSec.id);
       const firstQOfNext = nextSec.startIndex + 1;
-      
+
       setQuestionStatuses((prev) => {
         if (prev[firstQOfNext]?.status === STATUS.NOT_VISITED) {
           return {
@@ -606,8 +723,8 @@ export default function App() {
         return {
           ...prev,
           [activeQuestionNumber]: { ...curr, status: STATUS.NOT_ANSWERED },
-          [targetQNum]: prev[targetQNum]?.status === STATUS.NOT_VISITED 
-            ? { ...prev[targetQNum], status: STATUS.NOT_ANSWERED } 
+          [targetQNum]: prev[targetQNum]?.status === STATUS.NOT_VISITED
+            ? { ...prev[targetQNum], status: STATUS.NOT_ANSWERED }
             : prev[targetQNum]
         };
       }
@@ -640,7 +757,7 @@ export default function App() {
       const userAns = s?.selectedOption;
       const isAttempted = s?.status === STATUS.ANSWERED || s?.status === STATUS.ANSWERED_AND_MARKED;
       const isCorrect = isAttempted && userAns && userAns.toLowerCase() === (q.correct_option || '').toLowerCase();
-      
+
       let marks = 0;
       if (isAttempted && userAns) {
         if (isCorrect) {
@@ -689,11 +806,21 @@ export default function App() {
     };
 
     await submitFinalAttempt(finalAttemptPayload, detailedAnswers);
+    // Clear in-progress session snapshot on final submission
+    try {
+      const sessionKey = `toppers_session_${candidate.rollNo}_${activeTestId}`;
+      localStorage.removeItem(sessionKey);
+      localStorage.removeItem(`ssc_mock_attempt_${activeTestId}_${candidate.rollNo}`);
+    } catch (e) { }
     setIsResultModalOpen(true);
   };
 
   const handleRestartTest = () => {
-    localStorage.removeItem(`ssc_mock_attempt_${activeTestId}_${candidate.rollNo}`);
+    try {
+      const sessionKey = `toppers_session_${candidate.rollNo}_${activeTestId}`;
+      localStorage.removeItem(sessionKey);
+      localStorage.removeItem(`ssc_mock_attempt_${activeTestId}_${candidate.rollNo}`);
+    } catch (e) { }
     setActiveSectionId(activeTestConfig.defaultSectionId);
     setCompletedSections([]);
     setActiveQuestionNumber(1);
@@ -729,7 +856,7 @@ export default function App() {
           try {
             localStorage.setItem('toppers_active_candidate', JSON.stringify(selectedCandidate));
             localStorage.setItem('toppers_screen', 'dashboard');
-          } catch (e) {}
+          } catch (e) { }
           setCurrentScreen('dashboard');
         }}
       />
@@ -749,20 +876,20 @@ export default function App() {
           handleSwitchTestTab(selectedId, true);
           try {
             localStorage.setItem('toppers_screen', 'test');
-          } catch (e) {}
+          } catch (e) { }
           setCurrentScreen('test');
         }}
         onSelectSscTest={() => {
           handleSwitchTestTab('ssc_cgl_tier1_mock_3', true);
           try {
             localStorage.setItem('toppers_screen', 'test');
-          } catch (e) {}
+          } catch (e) { }
           setCurrentScreen('test');
         }}
         onLogout={() => {
           try {
             localStorage.setItem('toppers_screen', 'login');
-          } catch (e) {}
+          } catch (e) { }
           setCurrentScreen('login');
         }}
       />
@@ -793,13 +920,13 @@ export default function App() {
         onGoToDashboard={() => {
           try {
             localStorage.setItem('toppers_screen', 'dashboard');
-          } catch (e) {}
+          } catch (e) { }
           setCurrentScreen('dashboard');
         }}
         onSwitchUser={() => {
           try {
             localStorage.setItem('toppers_screen', 'login');
-          } catch (e) {}
+          } catch (e) { }
           setCurrentScreen('login');
         }}
       />
@@ -925,7 +1052,7 @@ export default function App() {
           setIsResultModalOpen(false);
           try {
             localStorage.setItem('toppers_screen', 'dashboard');
-          } catch (e) {}
+          } catch (e) { }
           setCurrentScreen('dashboard');
         }}
         questions={questions}

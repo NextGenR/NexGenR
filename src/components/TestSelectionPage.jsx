@@ -216,6 +216,20 @@ export default function TestSelectionPage({
   const [activeTab, setActiveTab] = useState('rrb'); // 'rrb' | 'ssc'
   const [noticeMessage, setNoticeMessage] = useState(null);
 
+  // Check if candidate has an in-progress session for a specific test
+  const getSavedTestSession = (testId) => {
+    if (!candidate?.rollNo || !testId) return null;
+    try {
+      const key = `toppers_session_${candidate.rollNo}_${testId}`;
+      const saved = localStorage.getItem(key);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && !parsed.isSubmitted) return parsed;
+      }
+    } catch (e) {}
+    return null;
+  };
+
   const handleLaunchTest = (testItem) => {
     // If user clicks Mock Test 1, launch RRB Mock Test 1
     if (testItem.testNumber === 1 || testItem.id === 'rrb_cbt_mock_1') {
@@ -354,18 +368,30 @@ export default function TestSelectionPage({
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
           {RRB_MOCK_TESTS_LIST.map((testItem) => {
             const isMock1 = testItem.testNumber === 1;
+            const savedSession = getSavedTestSession(testItem.id);
+            const isInProgress = Boolean(savedSession);
 
             return (
               <div
                 key={testItem.id}
                 className={`rounded-xl border transition-all duration-200 overflow-hidden flex flex-col bg-white shadow-xs hover:shadow-md ${
-                  isMock1 
-                    ? 'border-emerald-500 ring-2 ring-emerald-400/40 relative' 
-                    : 'border-gray-300 hover:border-blue-400'
+                  isInProgress
+                    ? 'border-amber-500 ring-2 ring-amber-400/50 relative'
+                    : isMock1 
+                      ? 'border-emerald-500 ring-2 ring-emerald-400/40 relative' 
+                      : 'border-gray-300 hover:border-blue-400'
                 }`}
               >
-                {/* Special Active Badge for Mock Test 1 */}
-                {isMock1 && (
+                {/* Active / In-Progress Ribbon */}
+                {isInProgress ? (
+                  <div className="bg-amber-600 text-white text-[10px] font-black px-3 py-1 flex items-center justify-between uppercase tracking-wider animate-pulse">
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-white"></span>
+                      <span>In-Progress • Resumes from Q.{savedSession.activeQuestionNumber || 1}</span>
+                    </span>
+                    <span>Test #{testItem.testNumber}</span>
+                  </div>
+                ) : isMock1 && (
                   <div className="bg-emerald-600 text-white text-[10px] font-black px-3 py-1 flex items-center justify-between uppercase tracking-wider">
                     <span className="flex items-center gap-1">
                       <span className="w-2 h-2 rounded-full bg-white animate-ping"></span>
@@ -383,11 +409,13 @@ export default function TestSelectionPage({
                         Test #{testItem.testNumber}
                       </span>
                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                        isMock1 
-                          ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' 
-                          : 'bg-gray-100 text-gray-600 border border-gray-200'
+                        isInProgress
+                          ? 'bg-amber-100 text-amber-900 border border-amber-300'
+                          : isMock1 
+                            ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' 
+                            : 'bg-gray-100 text-gray-600 border border-gray-200'
                       }`}>
-                        {isMock1 ? '🟢 Ready to Attempt' : 'Practice Test'}
+                        {isInProgress ? '⚡ Attempt in Progress' : isMock1 ? '🟢 Ready to Attempt' : 'Practice Test'}
                       </span>
                     </div>
 
@@ -425,18 +453,24 @@ export default function TestSelectionPage({
                     </span>
                   </div>
 
-                  {/* Launch / Start Button */}
+                  {/* Launch / Resume Button */}
                   <button
                     onClick={() => handleLaunchTest(testItem)}
                     className={`w-full py-2.5 px-4 rounded-lg font-bold text-xs transition-all flex items-center justify-center space-x-2 shadow-xs cursor-pointer ${
-                      isMock1
-                        ? 'bg-[#1b4d89] hover:bg-[#153e6e] text-white hover:shadow-md'
-                        : 'bg-gray-800 hover:bg-black text-white'
+                      isInProgress
+                        ? 'bg-amber-600 hover:bg-amber-700 text-white shadow-md'
+                        : isMock1
+                          ? 'bg-[#1b4d89] hover:bg-[#153e6e] text-white hover:shadow-md'
+                          : 'bg-gray-800 hover:bg-black text-white'
                     }`}
                   >
                     <Play className="w-3.5 h-3.5 fill-current" />
                     <span>
-                      {isMock1 ? 'Select & Start Mock Test 1' : `Start Mock Test ${testItem.testNumber}`}
+                      {isInProgress
+                        ? `Resume Test (from Q.${savedSession.activeQuestionNumber || 1})`
+                        : isMock1 
+                          ? 'Select & Start Mock Test 1' 
+                          : `Start Mock Test ${testItem.testNumber}`}
                     </span>
                     <ChevronRight className="w-4 h-4 ml-0.5" />
                   </button>

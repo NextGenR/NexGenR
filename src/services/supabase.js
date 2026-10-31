@@ -111,7 +111,7 @@ export const saveUserResponseInstant = async (resp) => {
     const payload = {
       attempt_id: String(resp.attempt_id),
       roll_number: String(resp.roll_number || '2201048291'),
-      candidate_name: resp.candidate_name || 'ANKIT SHARMA',
+      candidate_name: resp.candidate_name || 'ANKIT MEWADA',
       test_id: resp.test_id || 'ssc_cgl_tier1_mock_3',
       question_number: Number(resp.question_number),
       section_name: resp.section_name || '',
@@ -227,7 +227,7 @@ export const submitFinalAttempt = async (attemptData, detailedAnswers = []) => {
       const responsesPayload = detailedAnswers.map(ans => ({
         attempt_id: String(attemptData.id),
         roll_number: attemptData.roll_number || '2201048291',
-        candidate_name: attemptData.candidate_name || 'ANKIT SHARMA',
+        candidate_name: attemptData.candidate_name || 'ANKIT MEWADA',
         test_id: attemptData.test_id || 'ssc_cgl_tier1_mock_3',
         question_number: Number(ans.question_number),
         section_name: ans.section_name,

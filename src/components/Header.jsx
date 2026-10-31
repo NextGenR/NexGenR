@@ -7,7 +7,7 @@ export default function Header({
   language,
   setLanguage,
   candidate = {
-    name: "ANKIT SHARMA",
+    name: "ANKIT MEWADA",
     rollNo: "2201048291",
     systemNo: "C9-LAB3-042",
     photoUrl: null
