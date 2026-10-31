@@ -3,6 +3,7 @@ import { Info, Lock, CheckCircle, Clock } from 'lucide-react';
 import { SECTIONS } from '../data/questions';
 
 export default function SectionTabs({
+  sections = SECTIONS,
   activeSectionId,
   completedSections = [],
   onSelectSection,
@@ -45,7 +46,7 @@ export default function SectionTabs({
         <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider pr-1 hidden sm:inline">
           Sections:
         </span>
-        {SECTIONS.map((section) => {
+        {(sections || SECTIONS).map((section) => {
           const isCurrent = activeSectionId === section.id;
           const isCompleted = completedSections.includes(section.id);
           const isLocked = !isCurrent && !isCompleted;

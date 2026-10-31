@@ -13,11 +13,12 @@ import EarlySectionSubmitModal from './components/EarlySectionSubmitModal';
 import SupabaseSettingsModal from './components/SupabaseSettingsModal';
 
 import { 
-  SECTIONS, 
+  AVAILABLE_TESTS,
   STATUS, 
-  SECTION_DURATION_SECONDS,
-  TOTAL_EXAM_DURATION_SECONDS,
-  getDefaultQuestions 
+  SSC_SECTIONS,
+  RRB_SECTIONS,
+  getDefaultQuestions,
+  getRrbMockTestQuestions 
 } from './data/questions';
 
 import {
@@ -25,15 +26,12 @@ import {
   getInProgressAttempt,
   saveOrUpdateAttempt,
   recordQuestionAnswer,
-  recordUserResponse,
   saveUserResponseInstant,
   fetchUserResponsesFromDb,
   submitFinalAttempt
 } from './services/supabase';
 
 export default function App() {
-  const TEST_ID = 'ssc_cgl_tier1_mock_3';
-  const TEST_TITLE = 'SSC CGL Tier-I Mock Test 3 (TCS iON CBT)';
   const candidate = {
     name: "ANKIT SHARMA",
     rollNo: "2201048291",
@@ -41,25 +39,30 @@ export default function App() {
     photoUrl: null
   };
 
-  // Questions (Mock Test 3 default)
-  const [questions, setQuestions] = useState(() => getDefaultQuestions());
+  // Active Test Selection (Default: SSC CGL, user can switch to RRB MOCK TEST)
+  const [activeTestId, setActiveTestId] = useState(() => {
+    return localStorage.getItem('toppers_active_test_id') || 'ssc_cgl_tier1_mock_3';
+  });
 
-  // Deterministic, persistent attempt ID so it ALWAYS maps to the same candidate & test across page refreshes
-  const attemptId = `attempt_${candidate.rollNo}_${TEST_ID}`;
+  const activeTestConfig = AVAILABLE_TESTS[activeTestId] || AVAILABLE_TESTS.ssc_cgl_tier1_mock_3;
+  const sections = activeTestConfig.sections;
+
+  // Questions for active test
+  const [questions, setQuestions] = useState(() => activeTestConfig.getQuestions());
+
+  // Deterministic attempt ID tied to candidate and active test
+  const attemptId = `attempt_${candidate.rollNo}_${activeTestId}`;
 
   // Section Tracking (Strict Sectional Timing)
-  const [activeSectionId, setActiveSectionId] = useState('gi');
-  const [completedSections, setCompletedSections] = useState([]); // ['gi', 'ga', ...]
+  const [activeSectionId, setActiveSectionId] = useState(() => activeTestConfig.defaultSectionId);
+  const [completedSections, setCompletedSections] = useState([]); // ['gs', 'math', ...]
 
   // Active Question Number (1 to 100)
   const [activeQuestionNumber, setActiveQuestionNumber] = useState(1);
 
-  // Sectional Time Left mapping in seconds: { gi: 900, ga: 900, qa: 900, ec: 900 }
+  // Sectional Time Left mapping in seconds
   const [sectionalTimeLeft, setSectionalTimeLeft] = useState(() => ({
-    gi: SECTION_DURATION_SECONDS,
-    ga: SECTION_DURATION_SECONDS,
-    qa: SECTION_DURATION_SECONDS,
-    ec: SECTION_DURATION_SECONDS,
+    ...activeTestConfig.initialSectionalTimes
   }));
 
   const [isTimerRunning, setIsTimerRunning] = useState(true);
@@ -70,8 +73,8 @@ export default function App() {
   // { [qNum]: { status, selectedOption, timeSpentSeconds } }
   const [questionStatuses, setQuestionStatuses] = useState(() => {
     const initial = {};
-    const defaultQs = getDefaultQuestions();
-    defaultQs.forEach((q, idx) => {
+    const qs = activeTestConfig.getQuestions();
+    qs.forEach((q, idx) => {
       initial[q.question_number] = {
         status: idx === 0 ? STATUS.NOT_ANSWERED : STATUS.NOT_VISITED,
         selectedOption: null,
@@ -100,14 +103,52 @@ export default function App() {
   const [isSynced, setIsSynced] = useState(true);
 
   // --------------------------------------------------------------------------
-  // 1. INSTANT FETCH FROM SUPABASE ON PAGE LOAD / REFRESH
+  // Tab Switcher Handler (Switch between SSC CGL and RRB Mock Tests)
+  // --------------------------------------------------------------------------
+  const handleSwitchTestTab = async (newTestId) => {
+    if (newTestId === activeTestId) return;
+
+    const targetConfig = AVAILABLE_TESTS[newTestId];
+    if (!targetConfig) return;
+
+    // Save test choice
+    localStorage.setItem('toppers_active_test_id', newTestId);
+    setActiveTestId(newTestId);
+
+    const targetQuestions = targetConfig.getQuestions();
+    setQuestions(targetQuestions);
+    setActiveSectionId(targetConfig.defaultSectionId);
+    setCompletedSections([]);
+    setActiveQuestionNumber(1);
+    setSectionalTimeLeft({ ...targetConfig.initialSectionalTimes });
+    setIsTimerRunning(true);
+
+    // Initialize statuses
+    const resetStatuses = {};
+    targetQuestions.forEach((q, idx) => {
+      resetStatuses[q.question_number] = {
+        status: idx === 0 ? STATUS.NOT_ANSWERED : STATUS.NOT_VISITED,
+        selectedOption: null,
+        timeSpentSeconds: 0,
+      };
+    });
+    setQuestionStatuses(resetStatuses);
+
+    setLiveSyncMessage(`Switched to ${targetConfig.tabLabel} (${targetQuestions.length} Questions)`);
+    setTimeout(() => setLiveSyncMessage(null), 3500);
+  };
+
+  // --------------------------------------------------------------------------
+  // 1. INSTANT FETCH FROM SUPABASE ON PAGE LOAD / TEST CHANGE
   // --------------------------------------------------------------------------
   useEffect(() => {
     let isMounted = true;
+    const currentAttemptId = `attempt_${candidate.rollNo}_${activeTestId}`;
+
     const loadSavedDataFromSupabase = async () => {
       try {
-        console.log('⚡ Fetching past responses from Supabase for attempt:', attemptId);
-        const savedResponses = await fetchUserResponsesFromDb(attemptId);
+        console.log(`⚡ Fetching past responses from Supabase for ${activeTestId} (attempt: ${currentAttemptId})`);
+        const savedResponses = await fetchUserResponsesFromDb(currentAttemptId);
         if (isMounted && savedResponses && Object.keys(savedResponses).length > 0) {
           setQuestionStatuses((prev) => {
             const updated = { ...prev };
@@ -126,12 +167,12 @@ export default function App() {
             });
             return updated;
           });
-          setLiveSyncMessage(`⚡ Restored ${Object.keys(savedResponses).length} responses from Supabase!`);
+          setLiveSyncMessage(`⚡ Restored ${Object.keys(savedResponses).length} saved responses from Supabase!`);
           setTimeout(() => setLiveSyncMessage(null), 4000);
         }
 
         // Also check if in-progress session metadata exists
-        const attempt = await getInProgressAttempt(TEST_ID, candidate.rollNo);
+        const attempt = await getInProgressAttempt(activeTestId, candidate.rollNo);
         if (isMounted && attempt && attempt.status === 'in_progress') {
           if (attempt.current_section_id) setActiveSectionId(attempt.current_section_id);
           if (attempt.current_question_number) setActiveQuestionNumber(attempt.current_question_number);
@@ -145,13 +186,12 @@ export default function App() {
 
     loadSavedDataFromSupabase();
     return () => { isMounted = false; };
-  }, []);
+  }, [activeTestId]);
 
   // Handler: Resume Past Attempt
   const handleResumePastAttempt = () => {
     if (!detectedPastAttempt) return;
 
-    if (detectedPastAttempt.id) setAttemptId(detectedPastAttempt.id);
     if (detectedPastAttempt.current_section_id) setActiveSectionId(detectedPastAttempt.current_section_id);
     if (detectedPastAttempt.current_question_number) setActiveQuestionNumber(detectedPastAttempt.current_question_number);
     if (detectedPastAttempt.completed_sections) setCompletedSections(detectedPastAttempt.completed_sections);
@@ -178,10 +218,7 @@ export default function App() {
   // Handler: Start Fresh Attempt
   const handleStartFreshAttempt = () => {
     setIsResumeModalOpen(false);
-    // Reset attempt key in storage
-    localStorage.removeItem(`ssc_mock_attempt_${TEST_ID}_${candidate.rollNo}`);
-    // Start fresh ID
-    setAttemptId('attempt_' + Date.now() + '_' + Math.random().toString(36).substring(2, 8));
+    localStorage.removeItem(`ssc_mock_attempt_${activeTestId}_${candidate.rollNo}`);
   };
 
   // --------------------------------------------------------------------------
@@ -206,7 +243,7 @@ export default function App() {
 
       // 2. Decrement time left for CURRENT ACTIVE SECTION
       setSectionalTimeLeft((prev) => {
-        const currentSecTime = prev[activeSectionId] ?? SECTION_DURATION_SECONDS;
+        const currentSecTime = prev[activeSectionId] ?? 900;
         if (currentSecTime <= 1) {
           // SECTION TIME IS OVER!
           handleSectionTimeExpired(activeSectionId);
@@ -230,7 +267,7 @@ export default function App() {
     .filter(([secId]) => !completedSections.includes(secId))
     .reduce((sum, [, secSecs]) => sum + secSecs, 0);
 
-  const currentSection = SECTIONS.find((s) => s.id === activeSectionId) || SECTIONS[0];
+  const currentSection = sections.find((s) => s.id === activeSectionId) || sections[0];
   const currentQuestion = questions.find((q) => q.question_number === activeQuestionNumber) || questions[0];
   const currentOption = questionStatuses[activeQuestionNumber]?.selectedOption || null;
   const currentQTimeSpent = questionStatuses[activeQuestionNumber]?.timeSpentSeconds || 0;
@@ -239,7 +276,7 @@ export default function App() {
   // Handling Section Expiration & Progression
   // --------------------------------------------------------------------------
   const handleSectionTimeExpired = (expiredSecId) => {
-    const expiredSectionObj = SECTIONS.find(s => s.id === expiredSecId);
+    const expiredSectionObj = sections.find(s => s.id === expiredSecId);
     setPendingExpiredSection(expiredSectionObj);
     setIsSectionTimeOverOpen(true);
   };
@@ -252,8 +289,8 @@ export default function App() {
     setCompletedSections(newlyCompleted);
 
     // Find next section in order
-    const currentIndex = SECTIONS.findIndex(s => s.id === activeSectionId);
-    const nextSec = SECTIONS[currentIndex + 1];
+    const currentIndex = sections.findIndex(s => s.id === activeSectionId);
+    const nextSec = sections[currentIndex + 1];
 
     if (nextSec) {
       // Advance to next section
@@ -273,7 +310,7 @@ export default function App() {
       setActiveQuestionNumber(firstQOfNext);
       syncToBackend(newlyCompleted, nextSec.id, firstQOfNext);
     } else {
-      // All 4 sections completed! Final test submission
+      // All sections completed! Final test submission
       handleFinalSubmit();
     }
   };
@@ -281,18 +318,16 @@ export default function App() {
   // Early Section Submit
   const handleConfirmEarlySectionSubmit = () => {
     setIsEarlySubmitOpen(false);
-    // Mark current section time as finished
     setSectionalTimeLeft(prev => ({ ...prev, [activeSectionId]: 0 }));
     handleProceedAfterSectionOver();
   };
 
   // --------------------------------------------------------------------------
-  // Auto-Save / Sync to Supabase & LocalStorage
+  // Auto-Save / Sync to Supabase
   // --------------------------------------------------------------------------
   const syncToBackend = async (completed = completedSections, currentSec = activeSectionId, currentQ = activeQuestionNumber) => {
     setIsSynced(false);
 
-    // Calculate total attempted
     let totalAttempted = 0;
     Object.values(questionStatuses).forEach((q) => {
       if (q.status === STATUS.ANSWERED || q.status === STATUS.ANSWERED_AND_MARKED) {
@@ -302,8 +337,8 @@ export default function App() {
 
     const payload = {
       id: attemptId,
-      test_id: TEST_ID,
-      test_title: TEST_TITLE,
+      test_id: activeTestId,
+      test_title: activeTestConfig.title,
       roll_number: candidate.rollNo,
       candidate_name: candidate.name,
       status: 'in_progress',
@@ -314,7 +349,7 @@ export default function App() {
       question_states: questionStatuses,
       total_questions: questions.length,
       total_attempted: totalAttempted,
-      time_taken_seconds: TOTAL_EXAM_DURATION_SECONDS - totalTimeLeft,
+      time_taken_seconds: activeTestConfig.totalDurationSeconds - totalTimeLeft,
     };
 
     await saveOrUpdateAttempt(payload);
@@ -323,14 +358,18 @@ export default function App() {
     const currentQData = questions.find(q => q.question_number === currentQ);
     const stateObj = questionStatuses[currentQ];
     if (currentQData && stateObj) {
-      await recordQuestionAnswer(attemptId, {
+      await recordQuestionAnswer({
+        attempt_id: attemptId,
+        roll_number: candidate.rollNo,
+        candidate_name: candidate.name,
+        test_id: activeTestId,
         question_number: currentQ,
         section_name: currentQData.section_title,
         selected_option: stateObj.selectedOption,
         correct_option: currentQData.correct_option,
         is_correct: stateObj.selectedOption?.toLowerCase() === currentQData.correct_option?.toLowerCase(),
         status: stateObj.status,
-        time_spent_seconds: stateObj.timeSpentSeconds || 0,
+        time_taken_seconds: stateObj.timeSpentSeconds || 0,
       });
     }
 
@@ -344,7 +383,7 @@ export default function App() {
       syncToBackend();
     }, 10000);
     return () => clearInterval(saveInterval);
-  }, [isTimerRunning, attemptId, activeSectionId, activeQuestionNumber, questionStatuses, sectionalTimeLeft, completedSections]);
+  }, [isTimerRunning, attemptId, activeTestId, activeSectionId, activeQuestionNumber, questionStatuses, sectionalTimeLeft, completedSections]);
 
   // --------------------------------------------------------------------------
   // Question Actions & State Updates (Instant Supabase Sync on Every Click)
@@ -367,7 +406,7 @@ export default function App() {
         attempt_id: attemptId,
         roll_number: candidate.rollNo,
         candidate_name: candidate.name,
-        test_id: TEST_ID,
+        test_id: activeTestId,
         question_number: activeQuestionNumber,
         section_name: currentQData.section_title,
         selected_option: optKey,
@@ -406,7 +445,7 @@ export default function App() {
         attempt_id: attemptId,
         roll_number: candidate.rollNo,
         candidate_name: candidate.name,
-        test_id: TEST_ID,
+        test_id: activeTestId,
         question_number: activeQuestionNumber,
         section_name: currentQData.section_title,
         selected_option: currentSelected,
@@ -459,7 +498,7 @@ export default function App() {
         attempt_id: attemptId,
         roll_number: candidate.rollNo,
         candidate_name: candidate.name,
-        test_id: TEST_ID,
+        test_id: activeTestId,
         question_number: activeQuestionNumber,
         section_name: currentQData.section_title,
         selected_option: currentSelected || null,
@@ -510,7 +549,7 @@ export default function App() {
         attempt_id: attemptId,
         roll_number: candidate.rollNo,
         candidate_name: candidate.name,
-        test_id: TEST_ID,
+        test_id: activeTestId,
         question_number: activeQuestionNumber,
         section_name: currentQData.section_title,
         selected_option: null,
@@ -526,7 +565,7 @@ export default function App() {
     syncToBackend();
   };
 
-  // Previous Question (within section)
+  // Previous Question
   const handlePreviousQuestion = () => {
     const minQInSection = currentSection.startIndex + 1;
     if (activeQuestionNumber > minQInSection) {
@@ -538,14 +577,12 @@ export default function App() {
   const handleNavigateToQuestion = (targetQNum) => {
     if (targetQNum === activeQuestionNumber) return;
 
-    // Check if target is inside active section
     const minQInSection = currentSection.startIndex + 1;
     const maxQInSection = currentSection.endIndex + 1;
     if (targetQNum < minQInSection || targetQNum > maxQInSection) {
-      return; // Locked!
+      return; // Locked to active section!
     }
 
-    // Mark current if left without answering
     setQuestionStatuses((prev) => {
       const curr = prev[activeQuestionNumber];
       if (curr && !curr.selectedOption && (curr.status === STATUS.NOT_VISITED || curr.status === STATUS.NOT_ANSWERED)) {
@@ -576,7 +613,6 @@ export default function App() {
     setIsSubmitModalOpen(false);
     setIsTimerRunning(false);
 
-    // Compute evaluation
     let correct = 0;
     let incorrect = 0;
     let unattempted = 0;
@@ -592,12 +628,12 @@ export default function App() {
       if (isAttempted && userAns) {
         if (isCorrect) {
           correct++;
-          score += 2.0;
-          marks = 2.0;
+          score += activeTestConfig.positiveMarks;
+          marks = activeTestConfig.positiveMarks;
         } else {
           incorrect++;
-          score -= 0.5;
-          marks = -0.5;
+          score -= activeTestConfig.negativeMarks;
+          marks = -activeTestConfig.negativeMarks;
         }
       } else {
         unattempted++;
@@ -616,12 +652,12 @@ export default function App() {
     });
 
     const accuracy = (correct + incorrect > 0) ? Math.round((correct / (correct + incorrect)) * 100) : 0;
-    const timeTaken = TOTAL_EXAM_DURATION_SECONDS - totalTimeLeft;
+    const timeTaken = activeTestConfig.totalDurationSeconds - totalTimeLeft;
 
     const finalAttemptPayload = {
       id: attemptId,
-      test_id: TEST_ID,
-      test_title: TEST_TITLE,
+      test_id: activeTestId,
+      test_title: activeTestConfig.title,
       roll_number: candidate.rollNo,
       candidate_name: candidate.name,
       total_questions: questions.length,
@@ -640,17 +676,11 @@ export default function App() {
   };
 
   const handleRestartTest = () => {
-    localStorage.removeItem(`ssc_mock_attempt_${TEST_ID}_${candidate.rollNo}`);
-    setAttemptId('attempt_' + Date.now() + '_' + Math.random().toString(36).substring(2, 8));
-    setActiveSectionId('gi');
+    localStorage.removeItem(`ssc_mock_attempt_${activeTestId}_${candidate.rollNo}`);
+    setActiveSectionId(activeTestConfig.defaultSectionId);
     setCompletedSections([]);
     setActiveQuestionNumber(1);
-    setSectionalTimeLeft({
-      gi: SECTION_DURATION_SECONDS,
-      ga: SECTION_DURATION_SECONDS,
-      qa: SECTION_DURATION_SECONDS,
-      ec: SECTION_DURATION_SECONDS,
-    });
+    setSectionalTimeLeft({ ...activeTestConfig.initialSectionalTimes });
     setIsTimerRunning(true);
     setIsResultModalOpen(false);
 
@@ -665,13 +695,13 @@ export default function App() {
     setQuestionStatuses(reset);
   };
 
-  const isCurrentSectionLast = activeSectionId === SECTIONS[SECTIONS.length - 1].id;
-  const currentSectionIndex = SECTIONS.findIndex(s => s.id === activeSectionId);
-  const nextSectionObj = SECTIONS[currentSectionIndex + 1];
+  const isCurrentSectionLast = activeSectionId === sections[sections.length - 1].id;
+  const currentSectionIndex = sections.findIndex(s => s.id === activeSectionId);
+  const nextSectionObj = sections[currentSectionIndex + 1];
 
   return (
     <div className="min-h-screen flex flex-col bg-[#e9ecef] font-sans antialiased text-gray-900 select-none overflow-hidden">
-      {/* 1. Top Header with Sectional Countdown & Supabase Status */}
+      {/* 1. Top Header with Exam Tabs & Sectional Countdown */}
       <Header
         sectionTimeLeft={sectionalTimeLeft[activeSectionId] ?? 0}
         totalTimeLeft={totalTimeLeft}
@@ -682,20 +712,24 @@ export default function App() {
         isSupabaseConfigured={isSupabaseConfigured}
         isSynced={isSynced}
         onOpenSupabaseModal={() => setIsSupabaseModalOpen(true)}
-        testTitle={TEST_TITLE}
+        testTitle={activeTestConfig.title}
+        availableTests={AVAILABLE_TESTS}
+        activeTestId={activeTestId}
+        onSelectTestTab={handleSwitchTestTab}
+        badgeText={activeTestConfig.badgeText}
       />
 
       {/* CBT Status Bar */}
       <div className="bg-[#e2e8f0] border-b border-gray-300 px-3 sm:px-4 py-1 flex items-center justify-between text-xs text-gray-600">
         <div className="flex items-center space-x-2">
           <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-          <span className="font-semibold text-gray-800">SSC CGL Mock Test 3</span>
+          <span className="font-bold text-gray-800">{activeTestConfig.tabLabel}</span>
           <span className="text-gray-400">|</span>
           <span className="text-blue-900 font-medium">
-            Section {currentSectionIndex + 1} of 4: <strong>{currentSection?.title}</strong>
+            Section {currentSectionIndex + 1} of {sections.length}: <strong>{currentSection?.title}</strong>
           </span>
           <span className="hidden md:inline text-gray-500">
-            (15 Mins / Section • Sections Locked Sequentially)
+            ({currentSection?.totalQuestions} Questions • Sequential CBT Locking)
           </span>
         </div>
         <div className="flex items-center space-x-3">
@@ -703,7 +737,7 @@ export default function App() {
             onClick={() => setIsSupabaseModalOpen(true)}
             className="text-[11px] font-bold text-[#1b4d89] hover:underline bg-white px-2 py-0.5 rounded border border-gray-300 shadow-2xs hover:bg-blue-50 transition"
           >
-            ⚙️ Supabase Config
+            ⚙️ Supabase Sync &amp; Upload
           </button>
           <button
             onClick={() => setIsCustomQuestionsOpen(true)}
@@ -725,12 +759,13 @@ export default function App() {
         </div>
       )}
 
-      {/* 2. Main Content Area (Two-Column Layout) */}
-      <main className="flex-1 flex flex-col md:flex-row overflow-hidden relative" style={{ height: 'calc(100vh - 85px)' }}>
+      {/* 2. Main Content Area */}
+      <main className="flex-1 flex flex-col md:flex-row overflow-hidden relative" style={{ height: 'calc(100vh - 110px)' }}>
         {/* Left Column (75% width) */}
         <section className="w-full md:w-[75%] flex flex-col h-full bg-white border-r border-gray-300 overflow-hidden">
           {/* Section Tabs with Strict Locking */}
           <SectionTabs
+            sections={sections}
             activeSectionId={activeSectionId}
             completedSections={completedSections}
             onSelectSection={(secId) => {
@@ -782,6 +817,11 @@ export default function App() {
       <SectionInfoModal
         isOpen={isInfoModalOpen}
         onClose={() => setIsInfoModalOpen(false)}
+        sections={sections}
+        totalDurationMinutes={Math.round(activeTestConfig.totalDurationSeconds / 60)}
+        totalMarks={activeTestConfig.totalMarks}
+        positiveMarks={activeTestConfig.positiveMarks}
+        negativeMarks={activeTestConfig.negativeMarks}
       />
 
       <SubmitModal
@@ -790,6 +830,7 @@ export default function App() {
         onConfirmSubmit={handleFinalSubmit}
         questions={questions}
         questionStatuses={questionStatuses}
+        sections={sections}
       />
 
       <ResultModal
@@ -797,9 +838,13 @@ export default function App() {
         onRestart={handleRestartTest}
         questions={questions}
         questionStatuses={questionStatuses}
-        timeTakenSeconds={TOTAL_EXAM_DURATION_SECONDS - totalTimeLeft}
+        timeTakenSeconds={activeTestConfig.totalDurationSeconds - totalTimeLeft}
         attemptId={attemptId}
         isSupabaseConfigured={isSupabaseConfigured}
+        sections={sections}
+        positiveMarks={activeTestConfig.positiveMarks}
+        negativeMarks={activeTestConfig.negativeMarks}
+        totalMarks={activeTestConfig.totalMarks}
       />
 
       <ResumeModal

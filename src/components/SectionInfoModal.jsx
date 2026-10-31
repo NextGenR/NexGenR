@@ -2,8 +2,19 @@ import React from 'react';
 import { X, Award, AlertTriangle, Clock } from 'lucide-react';
 import { SECTIONS } from '../data/questions';
 
-export default function SectionInfoModal({ isOpen, onClose }) {
+export default function SectionInfoModal({
+  isOpen,
+  onClose,
+  sections = SECTIONS,
+  totalDurationMinutes = 60,
+  totalMarks = 200,
+  positiveMarks = 2.0,
+  negativeMarks = 0.5
+}) {
   if (!isOpen) return null;
+
+  const currentSections = sections || SECTIONS;
+  const totalQuestions = currentSections.reduce((sum, s) => sum + s.totalQuestions, 0);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-fade-in">
@@ -26,10 +37,10 @@ export default function SectionInfoModal({ isOpen, onClose }) {
         <div className="p-5 max-h-[75vh] overflow-y-auto text-sm space-y-4">
           <div className="bg-blue-50 border border-blue-200 p-3 rounded text-blue-900 text-xs">
             <div className="font-bold mb-1 flex items-center">
-              <Clock className="w-4 h-4 mr-1 text-[#1b4d89]" /> Total Duration: 60 Minutes (1 Hour) | Total Questions: 100 | Maximum Marks: 200
+              <Clock className="w-4 h-4 mr-1 text-[#1b4d89]" /> Total Duration: {totalDurationMinutes} Minutes | Total Questions: {totalQuestions} | Maximum Marks: {totalMarks}
             </div>
             <div>
-              There is a negative marking of <span className="font-bold text-red-600">0.50 marks</span> for each wrong answer. Each correct response fetches <span className="font-bold text-green-700">+2.00 marks</span>.
+              There is a negative marking of <span className="font-bold text-red-600">{Number(negativeMarks).toFixed(2)} marks</span> for each wrong answer. Each correct response fetches <span className="font-bold text-green-700">+{Number(positiveMarks).toFixed(2)} marks</span>.
             </div>
           </div>
 
@@ -43,7 +54,7 @@ export default function SectionInfoModal({ isOpen, onClose }) {
               </tr>
             </thead>
             <tbody>
-              {SECTIONS.map((sec) => (
+              {currentSections.map((sec) => (
                 <tr key={sec.id} className="hover:bg-gray-50">
                   <td className="border border-gray-300 p-2 font-bold text-gray-600">{sec.part}</td>
                   <td className="border border-gray-300 p-2 font-medium">{sec.title}</td>
@@ -53,8 +64,8 @@ export default function SectionInfoModal({ isOpen, onClose }) {
               ))}
               <tr className="bg-gray-100 font-bold">
                 <td colSpan="2" className="border border-gray-300 p-2 text-right">Total:</td>
-                <td className="border border-gray-300 p-2 text-center">100</td>
-                <td className="border border-gray-300 p-2 text-center text-emerald-800">200</td>
+                <td className="border border-gray-300 p-2 text-center">{totalQuestions}</td>
+                <td className="border border-gray-300 p-2 text-center text-emerald-800">{totalMarks}</td>
               </tr>
             </tbody>
           </table>

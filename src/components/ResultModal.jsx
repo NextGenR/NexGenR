@@ -9,10 +9,15 @@ export default function ResultModal({
   questionStatuses,
   timeTakenSeconds = 0,
   attemptId = null,
-  isSupabaseConfigured = false
+  isSupabaseConfigured = false,
+  sections = SECTIONS,
+  positiveMarks = 2.0,
+  negativeMarks = 0.5,
+  totalMarks = 200
 }) {
+  const currentSections = sections || SECTIONS;
   const [activeTab, setActiveTab] = useState('summary'); // 'summary' | 'solutions' | 'timing'
-  const [solutionSection, setSolutionSection] = useState('gi');
+  const [solutionSection, setSolutionSection] = useState(() => currentSections[0]?.id || 'gi');
 
   if (!isOpen) return null;
 
@@ -31,10 +36,10 @@ export default function ResultModal({
     if (isAttempted && userAns) {
       if (userAns.toLowerCase() === (q.correct_option || '').toLowerCase()) {
         correctCount++;
-        totalScore += 2.0;
+        totalScore += positiveMarks;
       } else {
         incorrectCount++;
-        totalScore -= 0.5;
+        totalScore -= negativeMarks;
       }
     } else {
       unattemptedCount++;
@@ -130,7 +135,7 @@ export default function ResultModal({
                   <div className="text-2xl sm:text-3xl font-extrabold text-[#1b4d89] mt-1">
                     {totalScore.toFixed(2)}
                   </div>
-                  <div className="text-[11px] text-gray-500 mt-0.5">out of 200.00</div>
+                  <div className="text-[11px] text-gray-500 mt-0.5">out of {Number(totalMarks).toFixed(2)}</div>
                 </div>
 
                 <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-lg text-center shadow-xs">
@@ -176,7 +181,7 @@ export default function ResultModal({
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200">
-                      {SECTIONS.map((sec) => {
+                      {currentSections.map((sec) => {
                         const secQuestions = questions.slice(sec.startIndex, sec.endIndex + 1);
                         let sCorrect = 0;
                         let sIncorrect = 0;
@@ -195,7 +200,7 @@ export default function ResultModal({
                           }
                         });
 
-                        const sMarks = (sCorrect * 2.0) - (sIncorrect * 0.5);
+                        const sMarks = (sCorrect * positiveMarks) - (sIncorrect * negativeMarks);
 
                         return (
                           <tr key={sec.id} className="hover:bg-gray-50">
@@ -218,7 +223,7 @@ export default function ResultModal({
           {activeTab === 'solutions' && (
             <div className="space-y-4">
               <div className="flex space-x-2 border-b border-gray-200 pb-2 overflow-x-auto">
-                {SECTIONS.map((s) => (
+                {currentSections.map((s) => (
                   <button
                     key={s.id}
                     onClick={() => setSolutionSection(s.id)}
@@ -232,7 +237,7 @@ export default function ResultModal({
               </div>
 
               {(() => {
-                const targetSec = SECTIONS.find(s => s.id === solutionSection) || SECTIONS[0];
+                const targetSec = currentSections.find(s => s.id === solutionSection) || currentSections[0];
                 const secQuestions = questions.slice(targetSec.startIndex, targetSec.endIndex + 1);
 
                 return (

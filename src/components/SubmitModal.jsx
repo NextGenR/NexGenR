@@ -7,12 +7,14 @@ export default function SubmitModal({
   onClose,
   onConfirmSubmit,
   questions,
-  questionStatuses
+  questionStatuses,
+  sections = SECTIONS
 }) {
   if (!isOpen) return null;
 
   // Calculate per section statistics
-  const sectionStats = SECTIONS.map((sec) => {
+  const currentSections = sections || SECTIONS;
+  const sectionStats = currentSections.map((sec) => {
     const secQuestions = questions.slice(sec.startIndex, sec.endIndex + 1);
     let answered = 0;
     let notAnswered = 0;
