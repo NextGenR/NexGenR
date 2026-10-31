@@ -252,3 +252,4 @@ export default function LoginPage({ onLogin, initialCandidate }) {
     </div>
   );
 }
+
