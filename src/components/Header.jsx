@@ -20,7 +20,9 @@ export default function Header({
   availableTests = {},
   activeTestId = 'ssc_cgl_tier1_mock_3',
   onSelectTestTab,
-  badgeText = 'SECTIONAL TIMED'
+  badgeText = 'SECTIONAL TIMED',
+  onGoToDashboard,
+  onSwitchUser
 }) {
   const [isFullscreen, setIsFullscreen] = useState(false);
 
@@ -93,10 +95,30 @@ export default function Header({
           </div>
         </div>
 
-        <div className="text-[11px] text-blue-200/90 hidden md:flex items-center space-x-2">
-          <span className="font-semibold text-amber-300">TCS iON CBT Assessment</span>
-          <span className="text-blue-400">•</span>
-          <span>100 Questions Bilingual</span>
+        <div className="flex items-center space-x-2">
+          {onGoToDashboard && (
+            <button
+              onClick={onGoToDashboard}
+              className="flex items-center space-x-1 px-2.5 py-0.5 rounded bg-amber-400 hover:bg-amber-300 text-blue-950 text-xs font-black transition shadow-xs cursor-pointer"
+              title="Return to 10 RRB Mock Tests Dashboard"
+            >
+              <span>🏠</span>
+              <span>All 10 Tests</span>
+            </button>
+          )}
+          {onSwitchUser && (
+            <button
+              onClick={onSwitchUser}
+              className="flex items-center space-x-1 px-2 py-0.5 rounded bg-white/10 hover:bg-white/20 text-white text-xs font-semibold border border-white/20 transition cursor-pointer"
+              title="Switch Candidate"
+            >
+              <span>👤</span>
+              <span className="hidden sm:inline">Switch User</span>
+            </button>
+          )}
+          <div className="text-[11px] text-blue-200/90 hidden lg:flex items-center space-x-2 pl-2">
+            <span className="font-semibold text-amber-300">TCS iON CBT</span>
+          </div>
         </div>
       </div>
 

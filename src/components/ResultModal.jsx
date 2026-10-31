@@ -5,6 +5,8 @@ import { SECTIONS, STATUS } from '../data/questions';
 export default function ResultModal({
   isOpen,
   onRestart,
+  onGoToDashboard,
+  testTitle = "CBT Mock Test",
   questions,
   questionStatuses,
   timeTakenSeconds = 0,
@@ -71,9 +73,9 @@ export default function ResultModal({
           <div className="flex items-center space-x-3">
             <Award className="w-7 h-7 text-yellow-400" />
             <div>
-              <h2 className="text-lg font-bold">SSC CGL Tier 1 Mock Test 3 - Performance Report</h2>
+              <h2 className="text-lg font-bold">{testTitle} - Performance Report</h2>
               <div className="flex items-center space-x-2 text-xs text-blue-200">
-                <span>Official SSC Marking (+2.00 / -0.50)</span>
+                <span>Official Marking (+{positiveMarks.toFixed(2)} / -{negativeMarks.toFixed(2)})</span>
                 {attemptId && (
                   <>
                     <span>•</span>
@@ -342,13 +344,23 @@ export default function ResultModal({
 
         {/* Footer */}
         <div className="bg-gray-50 px-6 py-3 border-t border-gray-200 flex justify-between items-center">
-          <span className="text-xs text-gray-500">SSC Mock Test 3 Completed</span>
-          <button
-            onClick={onRestart}
-            className="px-5 py-2 bg-[#1b4d89] hover:bg-[#153e6e] text-white text-xs font-bold rounded shadow transition"
-          >
-            Restart Exam
-          </button>
+          <span className="text-xs text-gray-500">{testTitle} Completed</span>
+          <div className="flex items-center space-x-2">
+            {onGoToDashboard && (
+              <button
+                onClick={onGoToDashboard}
+                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 text-xs font-bold rounded shadow-xs transition cursor-pointer"
+              >
+                🏠 Back to Dashboard
+              </button>
+            )}
+            <button
+              onClick={onRestart}
+              className="px-5 py-2 bg-[#1b4d89] hover:bg-[#153e6e] text-white text-xs font-bold rounded shadow transition cursor-pointer"
+            >
+              Restart Exam
+            </button>
+          </div>
         </div>
       </div>
     </div>

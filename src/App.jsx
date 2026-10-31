@@ -11,6 +11,8 @@ import ResumeModal from './components/ResumeModal';
 import SectionTimeOverModal from './components/SectionTimeOverModal';
 import EarlySectionSubmitModal from './components/EarlySectionSubmitModal';
 import SupabaseSettingsModal from './components/SupabaseSettingsModal';
+import LoginPage from './components/LoginPage';
+import TestSelectionPage from './components/TestSelectionPage';
 
 import { 
   AVAILABLE_TESTS,
@@ -32,16 +34,31 @@ import {
 } from './services/supabase';
 
 export default function App() {
-  const candidate = {
-    name: "ANKIT SHARMA",
-    rollNo: "2201048291",
-    systemNo: "C9-LAB3-042",
-    photoUrl: null
-  };
+  // Navigation screen states: 'login' | 'dashboard' | 'test'
+  const [currentScreen, setCurrentScreen] = useState(() => {
+    return localStorage.getItem('toppers_screen') || 'login';
+  });
 
-  // Active Test Selection (Default: SSC CGL, user can switch to RRB MOCK TEST)
+  // Candidate Profile (Managed via Login screen dropdown: Om, Nitin, or custom)
+  const [candidate, setCandidate] = useState(() => {
+    try {
+      const saved = localStorage.getItem('toppers_active_candidate');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && parsed.name) return parsed;
+      }
+    } catch (e) {}
+    return {
+      name: "Om",
+      rollNo: "RRB2026-OM01",
+      systemNo: "C9-LAB3-042",
+      photoUrl: null
+    };
+  });
+
+  // Active Test Selection (Default: RRB Mock Test 1, user can switch or choose SSC CGL)
   const [activeTestId, setActiveTestId] = useState(() => {
-    return localStorage.getItem('toppers_active_test_id') || 'ssc_cgl_tier1_mock_3';
+    return localStorage.getItem('toppers_active_test_id') || 'rrb_cbt_mock_1';
   });
 
   const activeTestConfig = AVAILABLE_TESTS[activeTestId] || AVAILABLE_TESTS.ssc_cgl_tier1_mock_3;
@@ -105,8 +122,8 @@ export default function App() {
   // --------------------------------------------------------------------------
   // Tab Switcher Handler (Switch between SSC CGL and RRB Mock Tests)
   // --------------------------------------------------------------------------
-  const handleSwitchTestTab = async (newTestId) => {
-    if (newTestId === activeTestId) return;
+  const handleSwitchTestTab = async (newTestId, forceReset = false) => {
+    if (newTestId === activeTestId && !forceReset) return;
 
     const targetConfig = AVAILABLE_TESTS[newTestId];
     if (!targetConfig) return;
@@ -186,7 +203,7 @@ export default function App() {
 
     loadSavedDataFromSupabase();
     return () => { isMounted = false; };
-  }, [activeTestId]);
+  }, [activeTestId, candidate.rollNo]);
 
   // Handler: Resume Past Attempt
   const handleResumePastAttempt = () => {
@@ -699,6 +716,62 @@ export default function App() {
   const currentSectionIndex = sections.findIndex(s => s.id === activeSectionId);
   const nextSectionObj = sections[currentSectionIndex + 1];
 
+  // --------------------------------------------------------------------------
+  // SCREEN 1: CANDIDATE LOGIN PAGE
+  // User picks name from dropdown (Om, Nitin, or custom) and logs into portal
+  // --------------------------------------------------------------------------
+  if (currentScreen === 'login') {
+    return (
+      <LoginPage
+        initialCandidate={candidate}
+        onLogin={(selectedCandidate) => {
+          setCandidate(selectedCandidate);
+          try {
+            localStorage.setItem('toppers_active_candidate', JSON.stringify(selectedCandidate));
+            localStorage.setItem('toppers_screen', 'dashboard');
+          } catch (e) {}
+          setCurrentScreen('dashboard');
+        }}
+      />
+    );
+  }
+
+  // --------------------------------------------------------------------------
+  // SCREEN 2: 10 RRB MOCK TESTS SELECTION DASHBOARD
+  // Candidate views all 10 RRB Mock Tests and launches Mock Test 1
+  // --------------------------------------------------------------------------
+  if (currentScreen === 'dashboard') {
+    return (
+      <TestSelectionPage
+        candidate={candidate}
+        onSelectTest={(testId) => {
+          const selectedId = testId || 'rrb_cbt_mock_1';
+          handleSwitchTestTab(selectedId, true);
+          try {
+            localStorage.setItem('toppers_screen', 'test');
+          } catch (e) {}
+          setCurrentScreen('test');
+        }}
+        onSelectSscTest={() => {
+          handleSwitchTestTab('ssc_cgl_tier1_mock_3', true);
+          try {
+            localStorage.setItem('toppers_screen', 'test');
+          } catch (e) {}
+          setCurrentScreen('test');
+        }}
+        onLogout={() => {
+          try {
+            localStorage.setItem('toppers_screen', 'login');
+          } catch (e) {}
+          setCurrentScreen('login');
+        }}
+      />
+    );
+  }
+
+  // --------------------------------------------------------------------------
+  // SCREEN 3: TCS iON CBT TEST EXAMINATION ENVIRONMENT
+  // --------------------------------------------------------------------------
   return (
     <div className="min-h-screen flex flex-col bg-[#e9ecef] font-sans antialiased text-gray-900 select-none overflow-hidden">
       {/* 1. Top Header with Exam Tabs & Sectional Countdown */}
@@ -717,6 +790,18 @@ export default function App() {
         activeTestId={activeTestId}
         onSelectTestTab={handleSwitchTestTab}
         badgeText={activeTestConfig.badgeText}
+        onGoToDashboard={() => {
+          try {
+            localStorage.setItem('toppers_screen', 'dashboard');
+          } catch (e) {}
+          setCurrentScreen('dashboard');
+        }}
+        onSwitchUser={() => {
+          try {
+            localStorage.setItem('toppers_screen', 'login');
+          } catch (e) {}
+          setCurrentScreen('login');
+        }}
       />
 
       {/* CBT Status Bar */}
@@ -836,6 +921,13 @@ export default function App() {
       <ResultModal
         isOpen={isResultModalOpen}
         onRestart={handleRestartTest}
+        onGoToDashboard={() => {
+          setIsResultModalOpen(false);
+          try {
+            localStorage.setItem('toppers_screen', 'dashboard');
+          } catch (e) {}
+          setCurrentScreen('dashboard');
+        }}
         questions={questions}
         questionStatuses={questionStatuses}
         timeTakenSeconds={activeTestConfig.totalDurationSeconds - totalTimeLeft}
@@ -845,6 +937,7 @@ export default function App() {
         positiveMarks={activeTestConfig.positiveMarks}
         negativeMarks={activeTestConfig.negativeMarks}
         totalMarks={activeTestConfig.totalMarks}
+        testTitle={activeTestConfig.title}
       />
 
       <ResumeModal
